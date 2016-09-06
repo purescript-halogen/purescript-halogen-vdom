@@ -1,0 +1,20 @@
+{
+  "name": "purescript-halogen-vdom",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^1.0.1",
+    "purescript-eff": "^1.0.0",
+    "purescript-tuples": "^1.0.0",
+    "purescript-dom": "^2.0.1",
+    "purescript-maps": "^1.1.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^1.0.0",
+    "purescript-js-timers": "^1.0.0"
+  }
+}
