@@ -10,15 +10,6 @@ exports.forE = function (a, f) {
   }
 }
 
-exports.foldWithIxE = function (r, a, f) {
-  return function () {
-    for (var i = 0; i < a.length; i++) {
-      r = f(i, r, a[i])();
-    }
-    return r;
-  }
-}
-
 exports.replicateE = function (n, f) {
   return function () {
     for (var i = 0; i < n; i++) {
@@ -56,6 +47,42 @@ exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
       i++;
     }
     return a3;
+  }
+}
+
+exports.strMapWithIxE = function (as, fk, f) {
+  return function () {
+    var o = {};
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i];
+      var k = fk(a);
+      o[k] = f(k, i, a)();
+    }
+    return o;
+  }
+}
+
+exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
+  return function () {
+    var o2 = {};
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i];
+      var k = fk(a);
+      if (o1.hasOwnProperty(k)) {
+        o2[k] = f1(k, i, o1[k], a)();
+      } else {
+        o2[k] = f3(k, i, a)();
+      }
+    }
+    var ks = Object.keys(o1);
+    for (var i = 0; i < ks.length; i++) {
+      var k = ks[i];
+      if (o2.hasOwnProperty(k)) {
+        continue;
+      }
+      f2(k, o1[k])();
+    }
+    return o2;
   }
 }
 

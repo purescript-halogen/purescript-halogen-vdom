@@ -10,7 +10,7 @@ import Data.Nullable (toMaybe)
 import Data.Foldable (for_)
 import Data.Function.Uncurried as Fn
 import Data.StrMap as StrMap
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (Tuple(..), fst)
 import DOM (DOM)
 import DOM.HTML (window) as DOM
 import DOM.HTML.Types (htmlDocumentToDocument, htmlDocumentToParentNode) as DOM
@@ -27,9 +27,7 @@ infixr 1 Tuple as :=
 
 type Attribute = Tuple String String
 
--- type VDom = V.VDom String (Array Attribute) Void
-
-type VDom = V.VDom String (Array Attribute) (Exists Thunk)
+type VDom = V.VDom (Array Attribute) (Exists Thunk)
 
 data Thunk b = Thunk b (b → VDom)
 
@@ -55,13 +53,13 @@ type DBQuery =
 initialState ∷ State
 initialState = []
 
-elem ∷ ∀ k a w. String → a → Array (V.VDom k a w) → V.VDom k a w
+elem ∷ ∀ a w. String → a → Array (V.VDom a w) → V.VDom a w
 elem n a = V.Elem (V.ElemSpec Nothing n a)
 
-keyed ∷ ∀ k a w. String → a → Array (Tuple k (V.VDom k a w)) → V.VDom k a w
+keyed ∷ ∀ a w. String → a → Array (Tuple String (V.VDom a w)) → V.VDom a w
 keyed n a = V.Keyed (V.ElemSpec Nothing n a)
 
-text ∷ ∀ k a w. String → V.VDom k a w
+text ∷ ∀ a w. String → V.VDom a w
 text = V.Text
 
 thunk ∷ ∀ a. (a → VDom) → a → VDom
@@ -72,8 +70,10 @@ renderData st =
   elem "div" []
     [ elem "table"
         [ "class" := "table table-striped latest data" ]
-        -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (thunk renderDatabase db)) st) ]
-        [ elem "tbody" [] (map (thunk renderDatabase) st) ]
+        [ keyed "tbody" [] (map (\db → Tuple db.dbname (thunk renderDatabase db)) st) ]
+        -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (renderDatabase db)) st) ]
+        -- [ elem "tbody" [] (map (thunk renderDatabase) st) ]
+        -- [ elem "tbody" [] (map renderDatabase st) ]
     ]
 
   where
@@ -125,22 +125,24 @@ buildAttributes el = render
   where
   render as1 = do
     let
-      as1' = Fn.runFn3 buildStrMap fst snd as1
-      onAttr = Fn.mkFn2 \k v → DOM.setAttribute k v el
-    Fn.runFn2 forInE as1' onAttr
+      onAttr = Fn.mkFn3 \k _ (Tuple _ v) → do
+        DOM.setAttribute k v el
+        pure v
+    as1' ← Fn.runFn3 V.strMapWithIxE as1 fst onAttr
     pure (M.Step unit (patch as1') done)
 
   patch as1 as2 = do
     let
-      as2' = Fn.runFn3 buildStrMap fst snd as2
-      onThese = Fn.mkFn3 \k a b → do
-        if a /= b
-          then DOM.setAttribute k b el
-          else pure unit
+      onThese = Fn.mkFn4 \k _ a (Tuple _ b) → do
+        Fn.runFn2 V.whenE (a /= b)
+          (DOM.setAttribute k b el)
+        pure b
       onThis = Fn.mkFn2 \k _ → DOM.removeAttribute k el
-      onThat = Fn.mkFn2 \k a → DOM.setAttribute k a el
-    Fn.runFn5 diffKeysE onThese onThis onThat as1 as2'
-    pure (M.Step unit (patch as2') done)
+      onThat = Fn.mkFn3 \k ix (Tuple _ a) → do
+        DOM.setAttribute k a el
+        pure a
+    as2' ← Fn.runFn6 V.diffWithKeyAndIxE as1 as2 fst onThese onThis onThat
+    pure (M.Step unit (patch as1) done)
 
   done = pure unit
 
@@ -158,31 +160,6 @@ foreign import getData ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) State
 foreign import getTimeout ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) Int
 
 foreign import pingRenderRate ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) Unit
-
-foreign import forInE
-  ∷ ∀ eff a b
-  . Fn.Fn2
-      (StrMap.StrMap a)
-      (Fn.Fn2 String a (Eff eff b))
-      (Eff eff Unit)
-
-foreign import buildStrMap
-  ∷ ∀ a b
-  . Fn.Fn3
-      (a → String)
-      (a → b)
-      (Array a)
-      (StrMap.StrMap b)
-
-foreign import diffKeysE
-  ∷ ∀ eff a b c
-  . Fn.Fn5
-      (Fn.Fn3 String a b (Eff eff c))
-      (Fn.Fn2 String a (Eff eff c))
-      (Fn.Fn2 String b (Eff eff c))
-      (StrMap.StrMap a)
-      (StrMap.StrMap b)
-      (Eff eff Unit)
 
 foreign import unsafeRefEq
   ∷ ∀ a b
@@ -211,5 +188,5 @@ main = do
         pure unit
     machine ← V.buildVDom spec (renderData initialState)
     DOM.appendChild (M.extract machine) (DOM.elementToNode body)
-    -- loopTest 0 100 13 machine
+    -- loopTest 0 10 100 machine
     loopMain machine
