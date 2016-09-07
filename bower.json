@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "purescript-psci-support": "^1.0.0",
-    "purescript-js-timers": "^1.0.0"
+    "purescript-js-timers": "^1.0.0",
+    "purescript-exists": "^1.0.0"
   }
 }

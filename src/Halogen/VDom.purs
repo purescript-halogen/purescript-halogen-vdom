@@ -1,8 +1,10 @@
 module Halogen.VDom where
 
 import Prelude
+import Data.Array as Array
 import Data.Bifunctor (bimap)
 import Data.Function.Uncurried as Fn
+import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Nullable as Null
 import Data.Tuple (Tuple(..), snd)
@@ -12,8 +14,8 @@ import Unsafe.Coerce (unsafeCoerce)
 import DOM (DOM)
 import DOM.Node.Document (createElement, createElementNS, createTextNode) as DOM
 import DOM.Node.Types (Element, Node, Document, NodeList, elementToNode, textToNode) as DOM
-import DOM.Node.Node (appendChild, replaceChild, removeChild, childNodes, setTextContent) as DOM
-import DOM.Node.NodeList (item) as DOM
+import DOM.Node.Node (childNodes, firstChild, setTextContent) as DOM
+import DOM.Node.NodeList (length) as DOM
 
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
@@ -92,18 +94,6 @@ data ElemSpec a = ElemSpec (Maybe Namespace) String a
 instance functorElemSpec ∷ Functor ElemSpec where
   map f (ElemSpec ns name a) = ElemSpec ns name (f a)
 
-elem
-  ∷ ∀ k a w
-  . String
-  → Array a
-  → Array (VDom k (Array a) w)
-  → VDom k (Array a) w
-elem name attrs =
-  Elem (ElemSpec Nothing name attrs)
-
-text ∷ ∀ k a w. String → VDom k a w
-text = Text
-
 newtype Namespace = Namespace String
 
 derive instance eqNamespace ∷ Eq Namespace
@@ -111,8 +101,7 @@ derive instance eqNamespace ∷ Eq Namespace
 unNamespace ∷ Namespace → String
 unNamespace (Namespace s) = s
 
-nsSVG ∷ Namespace
-nsSVG = Namespace "http://www.w3.org/2000/svg"
+data Triple a b c = Triple a b c
 
 type VDomEff eff = Eff (dom ∷ DOM | eff)
 
@@ -120,66 +109,72 @@ type VDomMachine eff a b = Machine (VDomEff eff) a b
 
 type VDomStep eff a b = VDomEff eff (Step (VDomEff eff) a b)
 
-type VDomSpec eff a w =
-  { buildWidget ∷ VDomMachine eff w DOM.Node
+newtype VDomSpec eff a w = VDomSpec
+  { buildWidget ∷ VDomSpec eff a w → VDomMachine eff w DOM.Node
   , buildAttributes ∷ DOM.Element → VDomMachine eff a Unit
   , document ∷ DOM.Document
   }
 
 buildVDom
   ∷ ∀ eff k a w
-  . VDomSpec eff a w
+  . Ord k
+  ⇒ VDomSpec eff a w
   → VDomMachine eff (VDom k a w) DOM.Node
 buildVDom spec = render
   where
   render = case _ of
     Text s → buildText spec s
     Elem es ch → buildElem spec es ch
-    Keyed es ch → buildElem spec es (map snd ch) -- TODO
+    Keyed es ch → buildKeyed spec es ch
     Widget w → buildWidget spec w
     Grafted g → buildVDom spec (runGraft g)
 
 buildText
   ∷ ∀ eff k a w
-  . VDomSpec eff a w
+  . Ord k
+  ⇒ VDomSpec eff a w
   → String
   → VDomStep eff (VDom k a w) DOM.Node
-buildText spec = render
+buildText (VDomSpec spec) = render
   where
   render s = do
     node ← DOM.textToNode <$> DOM.createTextNode s spec.document
-    pure (Step node (patch node s) done)
+    pure (Step node (Fn.runFn2 patch node s) done)
 
-  patch node s1 = case _ of
+  patch = Fn.mkFn2 \node s1 → case _ of
     Grafted g →
-      patch node s1 (runGraft g)
+      Fn.runFn2 patch node s1 (runGraft g)
     Text s2 → do
-      when (s1 /= s2) (DOM.setTextContent s2 node)
-      pure (Step node (patch node s2) done)
+      Fn.runFn2 whenE (s1 /= s2) do
+        DOM.setTextContent s2 node
+      pure (Step node (Fn.runFn2 patch node s2) done)
     vdom →
-      buildVDom spec vdom
+      buildVDom (VDomSpec spec) vdom
 
   done = pure unit
 
 buildElem
   ∷ ∀ eff k a w
-  . VDomSpec eff a w
+  . Ord k
+  ⇒ VDomSpec eff a w
   → ElemSpec a
   → Array (VDom k a w)
   → VDomStep eff (VDom k a w) DOM.Node
-buildElem spec = render
+buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
     el ←
       case map unNamespace ns1 of
         Nothing → DOM.createElement name1 spec.document
         ns → DOM.createElementNS (Null.toNullable ns) name1 spec.document
-    let node = DOM.elementToNode el
     attrs ← spec.buildAttributes el as1
-    steps ← Fn.runFn2 forE ch1 \child → do
-      Step n m h ← buildVDom spec child
-      DOM.appendChild n node
-      pure (Tuple m h)
+    let
+      node = DOM.elementToNode el
+      onChild = Fn.mkFn2 \ix child → do
+        Step n m h ← buildVDom (VDomSpec spec) child
+        Fn.runFn2 appendChild n node
+        pure (Tuple m h)
+    steps ← Fn.runFn2 forE ch1 onChild
     pure
       (Step node
         (Fn.runFn4 patch node attrs es1 steps)
@@ -194,19 +189,16 @@ buildElem spec = render
       let
         onThese = Fn.mkFn3 \ix (Tuple step _) vdom → do
           Step n' m' h' ← step vdom
-          n ← unsafeItem ix nodes
-          when (not (n `eqNode` n')) do
-            void (DOM.replaceChild n' n node)
+          let n = Fn.runFn2 unsafeChildIx ix node
+          Fn.runFn2 whenE (not (Fn.runFn2 eqNode n' n)) do
+            Fn.runFn3 replaceChild n' n node
           pure (Tuple m' h')
-
-        onThis = Fn.mkFn2 \ix (Tuple _ halt) → void do
+        onThis = Fn.mkFn2 \ix (Tuple _ halt) → do
           halt
-          n ← unsafeItem ix nodes
-          DOM.removeChild n node
-
+          removeLastChild node
         onThat = Fn.mkFn2 \ix vdom → do
-          Step n m h ← buildVDom spec vdom
-          DOM.appendChild n node
+          Step n m h ← buildVDom (VDomSpec spec) vdom
+          Fn.runFn2 appendChild n node
           pure (Tuple m h)
       steps ← Fn.runFn5 diffWithIxE ch1 ch2 onThese onThis onThat
       pure
@@ -214,21 +206,89 @@ buildElem spec = render
           (Fn.runFn4 patch node attrs' es2 steps)
           (Fn.runFn2 done attrs' steps))
     vdom →
-      buildVDom spec vdom
+      buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn2 \attrs steps → do
     foreachE steps snd
     Machine.halt attrs
 
+buildKeyed
+  ∷ ∀ eff k a w
+  . Ord k
+  ⇒ VDomSpec eff a w
+  → ElemSpec a
+  → Array (Tuple k (VDom k a w))
+  → VDomStep eff (VDom k a w) DOM.Node
+buildKeyed (VDomSpec spec) = render
+  where
+  render es1@(ElemSpec ns1 name1 as1) ch1 = do
+    el ←
+      case map unNamespace ns1 of
+        Nothing → DOM.createElement name1 spec.document
+        ns → DOM.createElementNS (Null.toNullable ns) name1 spec.document
+    attrs ← spec.buildAttributes el as1
+    let
+      node = DOM.elementToNode el
+      onChild = Fn.mkFn3 \ix acc (Tuple k child) → do
+        Step n m h ← buildVDom (VDomSpec spec) child
+        Fn.runFn2 appendChild n node
+        pure (Map.insert k (Triple ix m h) acc)
+    steps ← Fn.runFn3 foldWithIxE Map.empty ch1 onChild
+    pure
+      (Step node
+        (Fn.runFn4 patch node attrs es1 steps)
+        (Fn.runFn2 done attrs steps))
+
+  patch = Fn.mkFn4 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 → case _ of
+    Grafted g →
+      Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
+    Keyed es2@(ElemSpec ns2 name2 as2) ch2 | ns1 == ns2 && name1 == name2 → do
+      attrs' ← Machine.step attrs as2
+      let
+        onChild = Fn.mkFn3 \ix (Tuple old new) (Tuple k child) →
+          case Map.pop k old of
+            Just (Tuple (Triple ix' step _) old') | ix == ix' → do
+              Step n' m' h' ← step child
+              let n = Fn.runFn2 unsafeChildIx ix node
+              Fn.runFn2 whenE (not (Fn.runFn2 eqNode n' n))
+                (Fn.runFn3 replaceChild n' n node)
+              pure (Tuple old' (Map.insert k (Triple ix m' h') new))
+            Just (Tuple (Triple ix' step _) old') → do
+              Step n' m' h' ← step child
+              Fn.runFn3 unsafeInsertChildIx ix n' node
+              pure (Tuple old' (Map.insert k (Triple ix m' h') new))
+            Nothing → do
+              Step n' m' h' ← buildVDom (VDomSpec spec) child
+              Fn.runFn3 unsafeInsertChildIx ix n' node
+              pure (Tuple old (Map.insert k (Triple ix m' h') new))
+      Tuple old steps ← Fn.runFn3 foldWithIxE (Tuple ch1 Map.empty) ch2 onChild
+      Fn.runFn2 forE
+        (Array.fromFoldable old)
+        (Fn.mkFn2 \i (Triple _ _ halt) → halt)
+      removeDanglingNodes (Array.length ch2) node
+      pure
+        (Step node
+          (Fn.runFn4 patch node attrs' es2 steps)
+          (Fn.runFn2 done attrs' steps))
+    vdom →
+      buildVDom (VDomSpec spec) vdom
+
+  done = Fn.mkFn2 \attrs steps → do
+    Fn.runFn2 forE
+      (Array.fromFoldable steps)
+      (Fn.mkFn2 \i (Triple _ _ halt) → halt)
+    Machine.halt attrs
+
 buildWidget
   ∷ ∀ eff k a w
-  . VDomSpec eff a w
+  . Ord k
+  ⇒ VDomSpec eff a w
   → w
   → VDomStep eff (VDom k a w) DOM.Node
-buildWidget spec = render
+buildWidget (VDomSpec spec) = render
   where
   render w = do
-    Step n m h ← spec.buildWidget w
+    Step n m h ← spec.buildWidget (VDomSpec spec) w
     pure (Step n (patch m) h)
 
   patch step = case _ of
@@ -238,17 +298,35 @@ buildWidget spec = render
       Step n m h ← step w
       pure (Step n (patch m) h)
     vdom →
-      buildVDom spec vdom
+      buildVDom (VDomSpec spec) vdom
 
-unsafeItem ∷ ∀ eff. Int → DOM.NodeList → Eff (dom ∷ DOM | eff) DOM.Node
-unsafeItem = unsafeCoerce DOM.item
+removeDanglingNodes ∷ ∀ eff. Int → DOM.Node → Eff (dom ∷ DOM | eff) Unit
+removeDanglingNodes len node =
+  Fn.runFn2 replicateE ((unsafeChildLength node) - len)
+    (removeFirstChild node)
 
 foreign import forE
   ∷ ∀ eff a b
   . Fn.Fn2
       (Array a)
-      (a → Eff eff b)
+      (Fn.Fn2 Int a (Eff eff b))
       (Eff eff (Array b))
+
+foreign import foldWithIxE
+  ∷ ∀ eff a b
+  . Fn.Fn3
+      b
+      (Array a)
+      (Fn.Fn3 Int b a (Eff eff b))
+      (Eff eff b)
+
+foreign import replicateE
+  ∷ ∀ eff a
+  . Fn.Fn2 Int (Eff eff a) (Eff eff Unit)
+
+foreign import whenE
+  ∷ ∀ eff a
+  . Fn.Fn2 Boolean (Eff eff a) (Eff eff Unit)
 
 foreign import diffWithIxE
   ∷ ∀ eff b c d
@@ -260,4 +338,31 @@ foreign import diffWithIxE
       (Fn.Fn2 Int c (Eff eff d))
       (Eff eff (Array d))
 
-foreign import eqNode ∷ DOM.Node → DOM.Node → Boolean
+foreign import replaceChild
+  ∷ ∀ eff
+  . Fn.Fn3 DOM.Node DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import removeFirstChild
+  ∷ ∀ eff
+  . DOM.Node → (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import removeLastChild
+  ∷ ∀ eff
+  . DOM.Node → (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import appendChild
+  ∷ ∀ eff
+  . Fn.Fn2 DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import unsafeInsertChildIx
+  ∷ ∀ eff
+  . Fn.Fn3 Int DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import unsafeChildIx
+  ∷ Fn.Fn2 Int DOM.Node DOM.Node
+
+foreign import unsafeChildLength
+  ∷ DOM.Node → Int
+
+foreign import eqNode
+  ∷ Fn.Fn2 DOM.Node DOM.Node Boolean
