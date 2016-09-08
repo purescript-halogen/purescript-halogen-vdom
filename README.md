@@ -20,3 +20,8 @@ It's goals being:
 Notably, `Halogen.VDom` is largely useless out of the box. It does not support
 attributes, properties, or event listeners. It is intended to be extended
 (and likely `newtype`d) by other frameworks to suit their needs.
+
+---
+
+* Read the [guide](./GUIDE.md).
+* See the [test example](./test/Main.purs).
