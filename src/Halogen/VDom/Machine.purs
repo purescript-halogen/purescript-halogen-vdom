@@ -8,6 +8,7 @@ module Halogen.VDom.Machine
   , loop
   , stepper
   , constantly
+  , never
   ) where
 
 import Prelude
@@ -46,3 +47,6 @@ stepper f h a = next <$> f a
 
 constantly ∷ ∀ m a b. Applicative m ⇒ b → Machine m a b
 constantly x _ = pure (Step x (constantly x) (pure unit))
+
+never ∷ ∀ m b. Applicative m ⇒ Machine m Void b
+never a = pure (Step (absurd a) never (pure unit))
