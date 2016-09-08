@@ -1,5 +1,20 @@
 {
   "name": "purescript-halogen-vdom",
+  "homepage": "https://github.com/slamdata/purescript-halogen-vdom",
+  "authors": [
+    "Nathan Faubion <nathan@n-son.com>"
+  ],
+  "description": "An extensible virtial-dom library for PureScript",
+  "keywords": [
+    "purescript",
+    "halogen",
+    "virtual-dom"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/slamdata/purescript-halogen-vdom.git"
+  },
+  "license": "Apache-2.0",
   "ignore": [
     "**/.*",
     "node_modules",
