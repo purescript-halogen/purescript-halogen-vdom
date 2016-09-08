@@ -11,11 +11,15 @@
     "purescript-eff": "^1.0.0",
     "purescript-tuples": "^1.0.0",
     "purescript-dom": "^2.0.1",
-    "purescript-maps": "^1.1.0"
+    "purescript-maps": "^1.1.0",
+    "purescript-maybe": "^1.0.0",
+    "purescript-unsafe-coerce": "^1.0.0",
+    "purescript-bifunctors": "^1.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^1.0.0",
     "purescript-js-timers": "^1.0.0",
-    "purescript-exists": "^1.0.0"
+    "purescript-exists": "^1.0.0",
+    "purescript-refs": "^1.0.0"
   }
 }

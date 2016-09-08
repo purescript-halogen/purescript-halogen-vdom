@@ -10,6 +10,10 @@ exports.pingRenderRate = function () {
   Monitoring.renderRate.ping();
 };
 
-exports.unsafeRefEq = function (a, b) {
-  return a === b;
+exports.requestAnimationFrame = function (f) {
+  return function () {
+    window.requestAnimationFrame(function () {
+      f();
+    });
+  }
 }

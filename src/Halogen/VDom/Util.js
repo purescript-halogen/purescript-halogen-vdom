@@ -7,24 +7,24 @@ exports.forE = function (a, f) {
       b.push(f(i, a[i])());
     }
     return b;
-  }
-}
+  };
+};
 
 exports.replicateE = function (n, f) {
   return function () {
     for (var i = 0; i < n; i++) {
       f();
     }
-  }
-}
+  };
+};
 
 exports.whenE = function (b, e) {
   return function () {
     if (b) {
       e();
     }
-  }
-}
+  };
+};
 
 exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
   return function () {
@@ -47,8 +47,8 @@ exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
       i++;
     }
     return a3;
-  }
-}
+  };
+};
 
 exports.strMapWithIxE = function (as, fk, f) {
   return function () {
@@ -59,8 +59,8 @@ exports.strMapWithIxE = function (as, fk, f) {
       o[k] = f(k, i, a)();
     }
     return o;
-  }
-}
+  };
+};
 
 exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
   return function () {
@@ -83,49 +83,9 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
       f2(k, o1[k])();
     }
     return o2;
-  }
-}
+  };
+};
 
-exports.replaceChild = function (a, b, c) {
-  return function () {
-    c.replaceChild(a, b);
-  }
-}
-
-exports.removeLastChild = function (a) {
-  return function () {
-    a.removeChild(a.lastChild);
-  }
-}
-
-exports.removeFirstChild = function (a) {
-  return function () {
-    a.removeChild(a.firstChild);
-  }
-}
-
-exports.appendChild = function (a, b) {
-  return function () {
-    b.appendChild(a);
-  }
-}
-
-exports.unsafeInsertChildIx = function (i, a, b) {
-  return function () {
-    b.insertBefore(a, b.childNodes.item(i));
-  }
-}
-
-exports.unsafeChildIx = function (i, d) {
-  return d.childNodes.item(i);
-}
-
-exports.unsafeChildLength = function (d) {
-  return d.childNodes.length;
-}
-
-exports.eqNode = refEq;
-
-function refEq (a, b) {
+exports.refEq = function (a, b) {
   return a === b;
-}
+};
