@@ -10,6 +10,16 @@ exports.forE = function (a, f) {
   };
 };
 
+exports.forInE = function (o, f) {
+  return function () {
+    var ks = Object.keys(o);
+    for (var i = 0; i < ks.length; i++) {
+      var k = ks[i];
+      f(k, o[k])();
+    }
+  };
+};
+
 exports.replicateE = function (n, f) {
   return function () {
     for (var i = 0; i < n; i++) {

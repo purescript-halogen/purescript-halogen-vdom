@@ -14,7 +14,6 @@ module Halogen.VDom.DOM
 import Prelude
 import Control.Monad.Eff (Eff, foreachE)
 
-import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..), fst, snd)
@@ -24,8 +23,8 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace, runGraft)
-import Halogen.VDom.Util (forE, whenE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
+import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace(..), runGraft)
+import Halogen.VDom.Util (forE, forInE, whenE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
 
 data Quaple a b c d = Quaple a b c d
 
@@ -103,7 +102,7 @@ buildElem (VDomSpec spec) = render
   patch = Fn.mkFn4 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 → case _ of
     Grafted g →
       Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
-    Elem es2@(ElemSpec ns2 name2 as2) ch2 | ns1 == ns2 && name1 == name2 → do
+    Elem es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
       attrs' ← Machine.step attrs as2
       let
         onThese = Fn.mkFn3 \ix (Tuple step _) vdom → do
@@ -157,7 +156,7 @@ buildKeyed (VDomSpec spec) = render
   patch = Fn.mkFn4 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 → case _ of
     Grafted g →
       Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
-    Keyed es2@(ElemSpec ns2 name2 as2) ch2 | ns1 == ns2 && name1 == name2 → do
+    Keyed es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
       attrs' ← Machine.step attrs as2
       let
         onThese = Fn.mkFn4 \k ix (Quaple _ ix' step _) (Tuple _ vdom) →
@@ -188,9 +187,7 @@ buildKeyed (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn2 \attrs steps → do
-    Fn.runFn2 forE
-      (Array.fromFoldable steps)
-      (Fn.mkFn2 \i (Quaple _ _ _ halt) → halt)
+    Fn.runFn2 forInE steps (Fn.mkFn2 \_ (Quaple _ _ _ halt) → halt)
     Machine.halt attrs
 
 buildWidget
@@ -220,6 +217,18 @@ createElem = Fn.mkFn3 \ns name doc →
   case ns of
     Nothing → Fn.runFn2 createElement name doc
     Just n  → Fn.runFn3 createElementNS n name doc
+
+eqElemSpec
+  ∷ ∀ a
+  . Fn.Fn2 (ElemSpec a) (ElemSpec a) Boolean
+eqElemSpec = Fn.mkFn2 \a b →
+  case a, b of
+    ElemSpec ns1 name1 _, ElemSpec ns2 name2 _ | name1 == name2 →
+      case ns1, ns2 of
+        Just (Namespace ns1'), Just (Namespace ns2') | ns1' == ns2' → true
+        Nothing, Nothing → true
+        _, _ → false
+    _, _ → false
 
 foreign import createTextNode
   ∷ ∀ eff
