@@ -23,7 +23,7 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace(..), runGraft)
+import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName, Namespace(..), runGraft)
 import Halogen.VDom.Util (forE, forInE, whenE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
 
 data Quaple a b c d = Quaple a b c d
@@ -212,7 +212,7 @@ buildWidget (VDomSpec spec) = render
 
 createElem
   ∷ ∀ eff
-  . Fn.Fn3 (Maybe Namespace) String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
+  . Fn.Fn3 (Maybe Namespace) ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
 createElem = Fn.mkFn3 \ns name doc →
   case ns of
     Nothing → Fn.runFn2 createElement name doc
@@ -240,11 +240,11 @@ foreign import setTextContent
 
 foreign import createElement
   ∷ ∀ eff
-  . Fn.Fn2 String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
+  . Fn.Fn2 ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
 
 foreign import createElementNS
   ∷ ∀ eff
-  . Fn.Fn3 Namespace String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
+  . Fn.Fn3 Namespace ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
 
 foreign import replaceChild
   ∷ ∀ eff
