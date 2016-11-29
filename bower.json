@@ -22,19 +22,19 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^1.0.1",
-    "purescript-eff": "^1.0.0",
-    "purescript-tuples": "^1.0.0",
-    "purescript-dom": "^2.0.1",
-    "purescript-maps": "^1.1.0",
-    "purescript-maybe": "^1.0.0",
-    "purescript-unsafe-coerce": "^1.0.0",
-    "purescript-bifunctors": "^1.0.0"
+    "purescript-prelude": "^2.1.0",
+    "purescript-eff": "^2.0.0",
+    "purescript-tuples": "^3.0.0",
+    "purescript-dom": "^3.3.0",
+    "purescript-maps": "^2.0.1",
+    "purescript-maybe": "^2.0.1",
+    "purescript-unsafe-coerce": "^2.0.0",
+    "purescript-bifunctors": "^2.0.0"
   },
   "devDependencies": {
-    "purescript-psci-support": "^1.0.0",
-    "purescript-js-timers": "^1.0.0",
-    "purescript-exists": "^1.0.0",
-    "purescript-refs": "^1.0.0"
+    "purescript-psci-support": "^2.0.0",
+    "purescript-js-timers": "^2.0.0",
+    "purescript-exists": "^2.0.0",
+    "purescript-refs": "^2.0.0"
   }
 }
