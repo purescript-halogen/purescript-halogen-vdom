@@ -6,4 +6,4 @@ module Halogen.VDom
 
 import Halogen.VDom.DOM (VDomEff, VDomMachine, VDomStep, VDomSpec(..), buildVDom) as DOM
 import Halogen.VDom.Machine (Machine, Step(..), extract, step, halt) as Machine
-import Halogen.VDom.Types (VDom(..), Graft, runGraft, ElemSpec(..), Namespace(..), unNamespace) as Types
+import Halogen.VDom.Types (VDom(..), Graft, runGraft, ElemSpec(..), ElemName(..), Namespace(..)) as Types

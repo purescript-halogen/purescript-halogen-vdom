@@ -6,14 +6,16 @@ module Halogen.VDom.Types
   , unGraft
   , runGraft
   , ElemSpec(..)
+  , ElemName(..)
   , Namespace(..)
-  , unNamespace
   ) where
 
 import Prelude
 import Data.Bifunctor (class Bifunctor, bimap)
+import Data.Generic (class Generic)
 import Data.Maybe (Maybe)
-import Data.Tuple(Tuple)
+import Data.Newtype (class Newtype)
+import Data.Tuple (Tuple)
 import Unsafe.Coerce (unsafeCoerce)
 
 data VDom a w
@@ -72,14 +74,25 @@ runGraft =
     in
       go v
 
-data ElemSpec a = ElemSpec (Maybe Namespace) String a
+data ElemSpec a = ElemSpec (Maybe Namespace) ElemName a
+
+derive instance eqElemSpec ∷ Eq a ⇒ Eq (ElemSpec a)
+derive instance ordElemSpec ∷ Ord a ⇒ Ord (ElemSpec a)
+derive instance genericElemSpec ∷ Generic a ⇒ Generic (ElemSpec a)
 
 instance functorElemSpec ∷ Functor ElemSpec where
   map f (ElemSpec ns name a) = ElemSpec ns name (f a)
 
+newtype ElemName = ElemName String
+
+derive instance newtypeElemName ∷ Newtype ElemName _
+derive newtype instance eqElemName ∷ Eq ElemName
+derive newtype instance ordElemName ∷ Ord ElemName
+derive instance genericElemName ∷ Generic ElemName
+
 newtype Namespace = Namespace String
 
-derive instance eqNamespace ∷ Eq Namespace
-
-unNamespace ∷ Namespace → String
-unNamespace (Namespace s) = s
+derive instance newtypeNamespace ∷ Newtype Namespace _
+derive newtype instance eqNamespace ∷ Eq Namespace
+derive newtype instance ordNamespace ∷ Ord Namespace
+derive instance genericNamespace ∷ Generic Namespace
