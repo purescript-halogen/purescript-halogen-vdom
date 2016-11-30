@@ -76,8 +76,9 @@ runGraft =
 
 data ElemSpec a = ElemSpec (Maybe Namespace) ElemName a
 
-derive instance eqElemSpec ∷ Eq a => Eq (ElemSpec a)
-derive instance ordElemSpec ∷ Ord a => Ord (ElemSpec a)
+derive instance eqElemSpec ∷ Eq a ⇒ Eq (ElemSpec a)
+derive instance ordElemSpec ∷ Ord a ⇒ Ord (ElemSpec a)
+derive instance genericElemSpec ∷ Generic a ⇒ Generic (ElemSpec a)
 
 instance functorElemSpec ∷ Functor ElemSpec where
   map f (ElemSpec ns name a) = ElemSpec ns name (f a)
