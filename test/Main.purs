@@ -47,17 +47,17 @@ type LastSample =
 type DBQuery =
   { elapsedClassName ∷ String
   , formatElapsed ∷ String
-  , query ∷ String 
+  , query ∷ String
   }
 
 initialState ∷ State
 initialState = []
 
 elem ∷ ∀ a w. String → a → Array (V.VDom a w) → V.VDom a w
-elem n a = V.Elem (V.ElemSpec Nothing n a)
+elem n a = V.Elem (V.ElemSpec Nothing (V.ElemName n) a)
 
 keyed ∷ ∀ a w. String → a → Array (Tuple String (V.VDom a w)) → V.VDom a w
-keyed n a = V.Keyed (V.ElemSpec Nothing n a)
+keyed n a = V.Keyed (V.ElemSpec Nothing (V.ElemName n) a)
 
 text ∷ ∀ a w. String → V.VDom a w
 text = V.Text
@@ -96,7 +96,7 @@ renderData st =
       [ "class" := "Query" <> q.elapsedClassName ]
       [ text q.formatElapsed
       , elem "div"
-          [ "class" := "popover left" ] 
+          [ "class" := "popover left" ]
           [ elem "div"
               [ "class" := "popover-content" ]
               [ text q.query ]
