@@ -1,6 +1,5 @@
 module Halogen.VDom.DOM
-  ( VDomEff
-  , VDomMachine
+  ( VDomMachine
   , VDomStep
   , VDomSpec(..)
   , buildVDom
@@ -28,11 +27,9 @@ import Halogen.VDom.Util (forE, forInE, whenE, diffWithIxE, diffWithKeyAndIxE, s
 
 data Quaple a b c d = Quaple a b c d
 
-type VDomEff eff = Eff (dom ∷ DOM | eff)
+type VDomMachine eff a b = Machine (Eff eff) a b
 
-type VDomMachine eff a b = Machine (VDomEff eff) a b
-
-type VDomStep eff a b = VDomEff eff (Step (VDomEff eff) a b)
+type VDomStep eff a b = Eff eff (Step (Eff eff) a b)
 
 newtype VDomSpec eff a w = VDomSpec
   { buildWidget ∷ VDomSpec eff a w → VDomMachine eff w DOM.Node
@@ -42,8 +39,8 @@ newtype VDomSpec eff a w = VDomSpec
 
 buildVDom
   ∷ ∀ eff a w
-  . VDomSpec eff a w
-  → VDomMachine eff (VDom a w) DOM.Node
+  . VDomSpec (dom ∷ DOM | eff) a w
+  → VDomMachine (dom ∷ DOM | eff) (VDom a w) DOM.Node
 buildVDom spec = render
   where
   render = case _ of
@@ -55,9 +52,9 @@ buildVDom spec = render
 
 buildText
   ∷ ∀ eff a w
-  . VDomSpec eff a w
+  . VDomSpec (dom ∷ DOM | eff) a w
   → String
-  → VDomStep eff (VDom a w) DOM.Node
+  → VDomStep (dom ∷ DOM | eff) (VDom a w) DOM.Node
 buildText (VDomSpec spec) = render
   where
   render s = do
@@ -78,10 +75,10 @@ buildText (VDomSpec spec) = render
 
 buildElem
   ∷ ∀ eff a w
-  . VDomSpec eff a w
+  . VDomSpec (dom ∷ DOM | eff) a w
   → ElemSpec a
   → Array (VDom a w)
-  → VDomStep eff (VDom a w) DOM.Node
+  → VDomStep (dom ∷ DOM | eff) (VDom a w) DOM.Node
 buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
@@ -132,10 +129,10 @@ buildElem (VDomSpec spec) = render
 
 buildKeyed
   ∷ ∀ eff a w
-  . VDomSpec eff a w
+  . VDomSpec (dom ∷ DOM | eff) a w
   → ElemSpec a
   → Array (Tuple String (VDom a w))
-  → VDomStep eff (VDom a w) DOM.Node
+  → VDomStep (dom ∷ DOM | eff) (VDom a w) DOM.Node
 buildKeyed (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
@@ -192,9 +189,9 @@ buildKeyed (VDomSpec spec) = render
 
 buildWidget
   ∷ ∀ eff a w
-  . VDomSpec eff a w
+  . VDomSpec (dom ∷ DOM | eff) a w
   → w
-  → VDomStep eff (VDom a w) DOM.Node
+  → VDomStep (dom ∷ DOM | eff) (VDom a w) DOM.Node
 buildWidget (VDomSpec spec) = render
   where
   render w = do
