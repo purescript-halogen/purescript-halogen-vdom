@@ -108,8 +108,8 @@ renderData st =
 
 buildWidget
   ∷ ∀ eff
-  . V.VDomSpec eff (Array Attribute) (Exists Thunk)
-  → V.VDomMachine eff (Exists Thunk) DOM.Node
+  . V.VDomSpec (dom ∷ DOM | eff) (Array Attribute) (Exists Thunk)
+  → V.VDomMachine (dom ∷ DOM | eff) (Exists Thunk) DOM.Node
 buildWidget spec = render
   where
   render = runExists \(Thunk a render) → do
@@ -126,7 +126,7 @@ buildWidget spec = render
 buildAttributes
   ∷ ∀ eff
   . DOM.Element
-  → V.VDomMachine eff (Array Attribute) Unit
+  → V.VDomMachine (dom ∷ DOM | eff) (Array Attribute) Unit
 buildAttributes el = render
   where
   render as1 = do
@@ -155,7 +155,7 @@ buildAttributes el = render
 mkSpec
   ∷ ∀ eff
   . DOM.Document
-  → V.VDomSpec eff (Array Attribute) (Exists Thunk)
+  → V.VDomSpec (dom ∷ DOM | eff) (Array Attribute) (Exists Thunk)
 mkSpec document = V.VDomSpec
   { buildWidget
   , buildAttributes
@@ -174,11 +174,11 @@ foreign import requestAnimationFrame ∷ ∀ eff. Eff (dom ∷ DOM | eff) Unit �
 
 mkRenderQueue
   ∷ ∀ eff a
-  . V.VDomSpec (ref ∷ REF | eff) (Array Attribute) (Exists Thunk)
+  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array Attribute) (Exists Thunk)
   → DOM.Node
   → (a → VDom)
   → a
-  → V.VDomEff (ref ∷ REF | eff) (a → V.VDomEff (ref ∷ REF | eff) Unit)
+  → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
 mkRenderQueue spec parent render initialValue = do
   initMachine ← V.buildVDom spec (render initialValue)
   DOM.appendChild (V.extract initMachine) parent
@@ -196,11 +196,11 @@ mkRenderQueue spec parent render initialValue = do
 
 mkRenderQueue'
   ∷ ∀ eff a
-  . V.VDomSpec (ref ∷ REF | eff) (Array Attribute) (Exists Thunk)
+  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array Attribute) (Exists Thunk)
   → DOM.Node
   → (a → VDom)
   → a
-  → V.VDomEff (ref ∷ REF | eff) (a → V.VDomEff (ref ∷ REF | eff) Unit)
+  → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
 mkRenderQueue' spec parent render initialValue = do
   initMachine ← V.buildVDom spec (render initialValue)
   DOM.appendChild (V.extract initMachine) parent
