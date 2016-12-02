@@ -102,10 +102,11 @@ buildElem (VDomSpec spec) = render
     Elem es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
       attrs' ← Machine.step attrs as2
       let
-        onThese = Fn.mkFn3 \ix (Tuple step _) vdom → do
+        onThese = Fn.mkFn3 \ix (Tuple step halt) vdom → do
           Step n' m' h' ← step vdom
           n ← Fn.runFn2 unsafeChildIx ix node
           Fn.runFn2 whenE (not (Fn.runFn2 refEq n' n)) do
+            halt
             Fn.runFn3 replaceChild n' n node
           pure (Tuple m' h')
         onThis = Fn.mkFn2 \ix (Tuple _ halt) → do
@@ -156,13 +157,14 @@ buildKeyed (VDomSpec spec) = render
     Keyed es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
       attrs' ← Machine.step attrs as2
       let
-        onThese = Fn.mkFn4 \k ix (Quaple _ ix' step _) (Tuple _ vdom) →
+        onThese = Fn.mkFn4 \k ix (Quaple _ ix' step halt) (Tuple _ vdom) →
           if ix == ix'
             then do
               Step n' m' h' ← step vdom
               n ← Fn.runFn2 unsafeChildIx ix node
-              Fn.runFn2 whenE (not (Fn.runFn2 refEq n' n))
-                (Fn.runFn3 replaceChild n' n node)
+              Fn.runFn2 whenE (not (Fn.runFn2 refEq n' n)) do
+                halt
+                Fn.runFn3 replaceChild n' n node
               pure (Quaple k ix m' h')
             else do
               Step n' m' h' ← step vdom
