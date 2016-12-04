@@ -68,10 +68,8 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
         o2[k] = f3(k, i, a)();
       }
     }
-    var ks = Object.keys(o1);
-    for (var i = 0; i < ks.length; i++) {
-      var k = ks[i];
-      if (o2.hasOwnProperty(k)) {
+    for (var k in o1) {
+      if (k in o2) {
         continue;
       }
       f2(k, o1[k])();
