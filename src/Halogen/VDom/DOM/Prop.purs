@@ -69,9 +69,6 @@ propFromInt = unsafeCoerce
 propFromNumber ∷ Number → PropValue
 propFromNumber = unsafeCoerce
 
-type PropEff eff a =
-  Eff (dom ∷ DOM, ref ∷ REF | eff) a
-
 buildProp
   ∷ ∀ eff a
   . (a → Eff (ref ∷ REF, dom ∷ DOM | eff) Unit)
