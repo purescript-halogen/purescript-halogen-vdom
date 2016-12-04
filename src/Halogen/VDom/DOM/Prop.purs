@@ -140,13 +140,10 @@ buildProp emit el = render
           _ →
             effPure v2
       Property _ val1, Property prop2 val2 →
-        case Fn.runFn2 refEq val1 val2, prop2 == "value" of
+        case Fn.runFn2 refEq val1 val2, prop2 of
           true, _ →
             effPure v2
-          _, false → do
-            Fn.runFn3 setProperty prop2 val2 el
-            pure v2
-          _, _ → do
+          _, "value" → do
             elVal ← Fn.runFn2 getProperty "value" el
             case not (Fn.runFn2 refEq elVal val2) of
               true → do
@@ -154,6 +151,9 @@ buildProp emit el = render
                 pure v2
               _ →
                 pure v2
+          _, _ → do
+            Fn.runFn3 setProperty prop2 val2 el
+            pure v2
       Handler _ _, Handler (DOM.EventType ty) f → do
         let
           handler = Fn.runFn2 unsafeLookup ty prevEvents

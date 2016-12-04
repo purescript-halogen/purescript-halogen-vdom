@@ -15,7 +15,7 @@ import Control.Monad.Eff (Eff, foreachE)
 
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Tuple (Tuple(..), fst)
 
 import DOM (DOM)
 import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
@@ -23,7 +23,7 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName, Namespace(..), runGraft)
-import Halogen.VDom.Util (forE, forInE, whenE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
+import Halogen.VDom.Util (forE, forInE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
 
 data Quaple a b c d = Quaple a b c d
 
@@ -65,9 +65,13 @@ buildText (VDomSpec spec) = render
     Grafted g →
       Fn.runFn2 patch node s1 (runGraft g)
     Text s2 → do
-      Fn.runFn2 whenE (s1 /= s2) do
-        Fn.runFn2 setTextContent s2 node
-      pure (Step node (Fn.runFn2 patch node s2) done)
+      let
+        res = Step node (Fn.runFn2 patch node s2) done
+      case s1 == s2 of
+        true → effPure res
+        _ → do
+          Fn.runFn2 setTextContent s2 node
+          pure res
     vdom →
       buildVDom (VDomSpec spec) vdom
 
@@ -83,14 +87,14 @@ buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
     el ← Fn.runFn3 createElem ns1 name1 spec.document
-    attrs ← spec.buildAttributes el as1
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
-        Step n m h ← buildVDom (VDomSpec spec) child
+        res@Step n m h ← buildVDom (VDomSpec spec) child
         Fn.runFn2 appendChild n node
-        pure (Tuple m h)
+        pure res
     steps ← Fn.runFn2 forE ch1 onChild
+    attrs ← spec.buildAttributes el as1
     pure
       (Step node
         (Fn.runFn4 patch node attrs es1 steps)
@@ -100,23 +104,25 @@ buildElem (VDomSpec spec) = render
     Grafted g →
       Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
     Elem es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
-      attrs' ← Machine.step attrs as2
       let
-        onThese = Fn.mkFn3 \ix (Tuple step halt) vdom → do
-          Step n' m' h' ← step vdom
+        onThese = Fn.mkFn3 \ix (Step _ step halt) vdom → do
+          res@Step n' m' h' ← step vdom
           n ← Fn.runFn2 unsafeChildIx ix node
-          Fn.runFn2 whenE (not (Fn.runFn2 refEq n' n)) do
-            halt
-            Fn.runFn3 replaceChild n' n node
-          pure (Tuple m' h')
-        onThis = Fn.mkFn2 \ix (Tuple _ halt) → do
+          case Fn.runFn2 refEq n' n of
+            true → pure res
+            _ → do
+              halt
+              Fn.runFn3 replaceChild n' n node
+              pure res
+        onThis = Fn.mkFn2 \ix (Step _ _ halt) → do
           halt
           removeLastChild node
         onThat = Fn.mkFn2 \ix vdom → do
-          Step n m h ← buildVDom (VDomSpec spec) vdom
+          res@Step n m h ← buildVDom (VDomSpec spec) vdom
           Fn.runFn2 appendChild n node
-          pure (Tuple m h)
+          pure res
       steps ← Fn.runFn5 diffWithIxE ch1 ch2 onThese onThis onThat
+      attrs' ← Machine.step attrs as2
       pure
         (Step node
           (Fn.runFn4 patch node attrs' es2 steps)
@@ -125,7 +131,7 @@ buildElem (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn2 \attrs steps → do
-    foreachE steps snd
+    foreachE steps Machine.halt
     Machine.halt attrs
 
 buildKeyed
@@ -162,10 +168,14 @@ buildKeyed (VDomSpec spec) = render
             then do
               Step n' m' h' ← step vdom
               n ← Fn.runFn2 unsafeChildIx ix node
-              Fn.runFn2 whenE (not (Fn.runFn2 refEq n' n)) do
-                halt
-                Fn.runFn3 replaceChild n' n node
-              pure (Quaple k ix m' h')
+              let
+                res = Quaple k ix m' h'
+              case Fn.runFn2 refEq n' n of
+                true → pure res
+                _ → do
+                  halt
+                  Fn.runFn3 replaceChild n' n node
+                  pure res
             else do
               Step n' m' h' ← step vdom
               Fn.runFn3 unsafeInsertChildIx ix n' node
@@ -228,6 +238,9 @@ eqElemSpec = Fn.mkFn2 \a b →
         Nothing, Nothing → true
         _, _ → false
     _, _ → false
+
+effPure ∷ ∀ eff a. a → Eff eff a
+effPure = pure
 
 foreign import createTextNode
   ∷ ∀ eff
