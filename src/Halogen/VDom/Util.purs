@@ -1,6 +1,7 @@
 module Halogen.VDom.Util
   ( forE
   , forInE
+  , replicateE
   , diffWithIxE
   , diffWithKeyAndIxE
   , strMapWithIxE
@@ -24,6 +25,13 @@ foreign import forInE
   . Fn.Fn2
       (StrMap.StrMap a)
       (Fn.Fn2 String a (Eff eff Unit))
+      (Eff eff Unit)
+
+foreign import replicateE
+  ∷ ∀ eff a
+  . Fn.Fn2
+      Int
+      (Eff eff a)
       (Eff eff Unit)
 
 foreign import diffWithIxE

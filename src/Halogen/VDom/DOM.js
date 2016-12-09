@@ -24,32 +24,26 @@ exports.createElementNS = function (ns, name, doc) {
   };
 };
 
-exports.replaceChild = function (a, b, c) {
-  return function () {
-    c.replaceChild(a, b);
-  };
-};
-
 exports.removeLastChild = function (a) {
   return function () {
     a.removeChild(a.lastChild);
   };
 };
 
-exports.appendChild = function (a, b) {
+exports.insertChildIx = function (i, a, b) {
   return function () {
-    b.appendChild(a);
-  };
-};
-
-exports.unsafeInsertChildIx = function (i, a, b) {
-  return function () {
-    b.insertBefore(a, b.childNodes.item(i));
+    b.insertBefore(a, b.childNodes.item(i) || null);
   };
 };
 
 exports.unsafeChildIx = function (i, d) {
   return function () {
     return d.childNodes.item(i);
+  };
+};
+
+exports.nodeLength = function (a) {
+  return function () {
+    return a.childNodes.length | 0;
   };
 };

@@ -13,6 +13,7 @@ module Halogen.VDom.DOM
 import Prelude
 import Control.Monad.Eff (Eff, foreachE)
 
+import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..), fst)
@@ -23,7 +24,7 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName, Namespace(..), runGraft)
-import Halogen.VDom.Util (forE, forInE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
+import Halogen.VDom.Util (forE, forInE, replicateE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
 
 data Quaple a b c d = Quaple a b c d
 
@@ -91,7 +92,7 @@ buildElem (VDomSpec spec) = render
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
         res@Step n m h ← buildVDom (VDomSpec spec) child
-        Fn.runFn2 appendChild n node
+        Fn.runFn3 insertChildIx ix n node
         pure res
     steps ← Fn.runFn2 forE ch1 onChild
     attrs ← spec.buildAttributes el as1
@@ -112,16 +113,17 @@ buildElem (VDomSpec spec) = render
             true → pure res
             _ → do
               halt
-              Fn.runFn3 replaceChild n' n node
+              Fn.runFn3 insertChildIx ix n' node
               pure res
         onThis = Fn.mkFn2 \ix (Step _ _ halt) → do
           halt
-          removeLastChild node
         onThat = Fn.mkFn2 \ix vdom → do
           res@Step n m h ← buildVDom (VDomSpec spec) vdom
-          Fn.runFn2 appendChild n node
+          Fn.runFn3 insertChildIx ix n node
           pure res
       steps ← Fn.runFn5 diffWithIxE ch1 ch2 onThese onThis onThat
+      len ← nodeLength node
+      Fn.runFn2 replicateE (len - Array.length ch2) (removeLastChild node)
       attrs' ← Machine.step attrs as2
       pure
         (Step node
@@ -144,14 +146,14 @@ buildKeyed (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
     el ← Fn.runFn3 createElem ns1 name1 spec.document
-    attrs ← spec.buildAttributes el as1
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
         Step n m h ← buildVDom (VDomSpec spec) vdom
-        Fn.runFn2 appendChild n node
+        Fn.runFn3 insertChildIx ix n node
         pure (Quaple k ix m h)
     steps ← Fn.runFn3 strMapWithIxE ch1 fst onChild
+    attrs ← spec.buildAttributes el as1
     pure
       (Step node
         (Fn.runFn4 patch node attrs es1 steps)
@@ -161,7 +163,6 @@ buildKeyed (VDomSpec spec) = render
     Grafted g →
       Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
     Keyed es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
-      attrs' ← Machine.step attrs as2
       let
         onThese = Fn.mkFn4 \k ix (Quaple _ ix' step halt) (Tuple _ vdom) →
           if ix == ix'
@@ -174,20 +175,22 @@ buildKeyed (VDomSpec spec) = render
                 true → pure res
                 _ → do
                   halt
-                  Fn.runFn3 replaceChild n' n node
+                  Fn.runFn3 insertChildIx ix n' node
                   pure res
             else do
               Step n' m' h' ← step vdom
-              Fn.runFn3 unsafeInsertChildIx ix n' node
+              Fn.runFn3 insertChildIx ix n' node
               pure (Quaple k ix m' h')
         onThis = Fn.mkFn2 \k (Quaple _ _ _ halt) → do
           halt
-          removeLastChild node
         onThat = Fn.mkFn3 \k ix (Tuple _ vdom) → do
           Step n' m' h' ← buildVDom (VDomSpec spec) vdom
-          Fn.runFn3 unsafeInsertChildIx ix n' node
+          Fn.runFn3 insertChildIx ix n' node
           pure (Quaple k ix m' h')
       steps ← Fn.runFn6 diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+      len ← nodeLength node
+      Fn.runFn2 replicateE (len - Array.length ch2) (removeLastChild node)
+      attrs' ← Machine.step attrs as2
       pure
         (Step node
           (Fn.runFn4 patch node attrs' es2 steps)
@@ -258,22 +261,18 @@ foreign import createElementNS
   ∷ ∀ eff
   . Fn.Fn3 Namespace ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
 
-foreign import replaceChild
-  ∷ ∀ eff
-  . Fn.Fn3 DOM.Node DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
-
 foreign import removeLastChild
   ∷ ∀ eff
   . DOM.Node → (Eff (dom ∷ DOM | eff) Unit)
 
-foreign import appendChild
-  ∷ ∀ eff
-  . Fn.Fn2 DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import unsafeInsertChildIx
+foreign import insertChildIx
   ∷ ∀ eff
   . Fn.Fn3 Int DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
 
 foreign import unsafeChildIx
   ∷ ∀ eff
   . Fn.Fn2 Int DOM.Node (Eff (dom ∷ DOM | eff) DOM.Node)
+
+foreign import nodeLength
+  ∷ ∀ eff
+  . DOM.Node → (Eff (dom ∷ DOM | eff) Int)
