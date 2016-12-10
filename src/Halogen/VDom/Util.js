@@ -20,14 +20,6 @@ exports.forInE = function (o, f) {
   };
 };
 
-exports.replicateE = function (n, f) {
-  return function () {
-    for (var i = 0; i < n; i++) {
-      f();
-    }
-  };
-};
-
 exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
   return function () {
     var a3 = [];

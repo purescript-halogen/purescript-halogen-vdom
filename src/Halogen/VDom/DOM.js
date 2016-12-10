@@ -24,6 +24,15 @@ exports.createElementNS = function (ns, name, doc) {
   };
 };
 
+exports.tryRemoveChild = function (a, b) {
+  return function () {
+    try {
+      b.removeChild(a);
+    } catch (e) {
+    }
+  };
+};
+
 exports.removeLastChild = function (a) {
   return function () {
     a.removeChild(a.lastChild);
@@ -39,11 +48,5 @@ exports.insertChildIx = function (i, a, b) {
 exports.unsafeChildIx = function (i, d) {
   return function () {
     return d.childNodes.item(i);
-  };
-};
-
-exports.nodeLength = function (a) {
-  return function () {
-    return a.childNodes.length | 0;
   };
 };
