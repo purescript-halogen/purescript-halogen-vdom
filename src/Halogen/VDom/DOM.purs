@@ -7,7 +7,6 @@ module Halogen.VDom.DOM
   , buildElem
   , buildKeyed
   , buildWidget
-  , createElem
   ) where
 
 import Prelude
@@ -23,8 +22,8 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName, Namespace(..), runGraft)
-import Halogen.VDom.Util (forE, forInE, replicateE, diffWithIxE, diffWithKeyAndIxE, strMapWithIxE, refEq)
+import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName(..), Namespace(..), runGraft)
+import Halogen.VDom.Util as Util
 
 type VDomMachine eff a b = Machine (Eff eff) a b
 
@@ -59,24 +58,25 @@ buildText
 buildText (VDomSpec spec) = render
   where
   render s = do
-    node ← Fn.runFn2 createTextNode s spec.document
-    pure (Step node (Fn.runFn2 patch node s) done)
+    node ← Fn.runFn2 Util.createTextNode s spec.document
+    pure (Step node (Fn.runFn2 patch node s) (done node))
 
   patch = Fn.mkFn2 \node s1 → case _ of
     Grafted g →
       Fn.runFn2 patch node s1 (runGraft g)
     Text s2 → do
-      let
-        res = Step node (Fn.runFn2 patch node s2) done
+      let res = Step node (Fn.runFn2 patch node s2) (done node)
       case s1 == s2 of
-        true → effPure res
+        true → pure res
         _ → do
-          Fn.runFn2 setTextContent s2 node
+          Fn.runFn2 Util.setTextContent s2 node
           pure res
-    vdom →
+    vdom → do
+      done node
       buildVDom (VDomSpec spec) vdom
 
-  done = pure unit
+  done node = do
+    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
 
 buildElem
   ∷ ∀ eff a w
@@ -92,54 +92,49 @@ buildElem (VDomSpec spec) = render
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
         res@Step n m h ← buildVDom (VDomSpec spec) child
-        Fn.runFn3 insertChildIx ix n node
+        Fn.runFn3 Util.insertChildIx ix n node
         pure res
-    steps ← Fn.runFn2 forE ch1 onChild
+    steps ← Fn.runFn2 Util.forE ch1 onChild
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
-        (Fn.runFn5 patch node attrs es1 steps (Array.length ch1))
-        (Fn.runFn2 done attrs steps))
+        (Fn.runFn4 patch node attrs es1 steps)
+        (Fn.runFn3 done node attrs steps))
 
-  patch = Fn.mkFn5 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 len1 → case _ of
+  patch = Fn.mkFn4 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 → case _ of
     Grafted g →
-      Fn.runFn5 patch node attrs es1 ch1 len1 (runGraft g)
-    Elem es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 →
-      case len1, Array.length ch2 of
+      Fn.runFn4 patch node attrs es1 ch1 (runGraft g)
+    Elem es2@(ElemSpec ns2 name2 as2) ch2 | Fn.runFn2 eqElemSpec es1 es2 → do
+      case Array.length ch1, Array.length ch2 of
         0, 0 → do
           attrs' ← Machine.step attrs as2
           pure
             (Step node
-              (Fn.runFn5 patch node attrs' es2 ch1 0)
-              (Fn.runFn2 done attrs' ch1))
-        _, len2 → do
+              (Fn.runFn4 patch node attrs' es2 ch1)
+              (Fn.runFn3 done node attrs' ch1))
+        _, _ → do
           let
-            onThese = Fn.mkFn3 \ix (Step n step halt) vdom → do
+            onThese = Fn.mkFn3 \ix (prev@Step n step halt) vdom → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 insertChildIx ix n' node
-              case Fn.runFn2 refEq n' n of
-                true → pure res
-                _ → do
-                  halt
-                  pure res
-            onThis = Fn.mkFn2 \ix (Step _ _ halt) → do
-              halt
+              Fn.runFn3 Util.insertChildIx ix n' node
+              pure res
+            onThis = Fn.mkFn2 \ix (res@Step n _ halt) → halt
             onThat = Fn.mkFn2 \ix vdom → do
               res@Step n m h ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 insertChildIx ix n node
+              Fn.runFn3 Util.insertChildIx ix n node
               pure res
-          steps ← Fn.runFn5 diffWithIxE ch1 ch2 onThese onThis onThat
-          lenD ← childNodesLength node
-          Fn.runFn2 replicateE (lenD - len2) (removeLastChild node)
+          steps ← Fn.runFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
           attrs' ← Machine.step attrs as2
           pure
             (Step node
-              (Fn.runFn5 patch node attrs' es2 steps len2)
-              (Fn.runFn2 done attrs' steps))
-    vdom →
+              (Fn.runFn4 patch node attrs' es2 steps)
+              (Fn.runFn3 done node attrs' steps))
+    vdom → do
+      Fn.runFn3 done node attrs ch1
       buildVDom (VDomSpec spec) vdom
 
-  done = Fn.mkFn2 \attrs steps → do
+  done = Fn.mkFn3 \node attrs steps → do
+    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
     foreachE steps Machine.halt
     Machine.halt attrs
 
@@ -157,14 +152,14 @@ buildKeyed (VDomSpec spec) = render
       node = DOM.elementToNode el
       onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
         res@Step n m h ← buildVDom (VDomSpec spec) vdom
-        Fn.runFn3 insertChildIx ix n node
+        Fn.runFn3 Util.insertChildIx ix n node
         pure res
-    steps ← Fn.runFn3 strMapWithIxE ch1 fst onChild
+    steps ← Fn.runFn3 Util.strMapWithIxE ch1 fst onChild
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
         (Fn.runFn5 patch node attrs es1 steps (Array.length ch1))
-        (Fn.runFn2 done attrs steps))
+        (Fn.runFn3 done node attrs steps))
 
   patch = Fn.mkFn5 \node attrs (es1@(ElemSpec ns1 name1 as1)) ch1 len1 → case _ of
     Grafted g →
@@ -176,36 +171,31 @@ buildKeyed (VDomSpec spec) = render
           pure
             (Step node
               (Fn.runFn5 patch node attrs' es2 ch1 0)
-              (Fn.runFn2 done attrs' ch1))
+              (Fn.runFn3 done node attrs' ch1))
         _, len2 → do
           let
-            onThese = Fn.mkFn4 \k ix' (Step n step halt) (Tuple _ vdom) → do
+            onThese = Fn.mkFn4 \k ix' (Step n step _) (Tuple _ vdom) → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 insertChildIx ix' n' node
-              case Fn.runFn2 refEq n' n of
-                true → pure res
-                _ → do
-                  halt
-                  pure res
-            onThis = Fn.mkFn2 \k (Step _ _ halt) → do
-              halt
+              Fn.runFn3 Util.insertChildIx ix' n' node
+              pure res
+            onThis = Fn.mkFn2 \k (Step n _ halt) → halt
             onThat = Fn.mkFn3 \k ix (Tuple _ vdom) → do
               res@Step n' m' h' ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 insertChildIx ix n' node
+              Fn.runFn3 Util.insertChildIx ix n' node
               pure res
-          steps ← Fn.runFn6 diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
-          lenD ← childNodesLength node
-          Fn.runFn2 replicateE (lenD - len2) (removeLastChild node)
+          steps ← Fn.runFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
           attrs' ← Machine.step attrs as2
           pure
             (Step node
               (Fn.runFn5 patch node attrs' es2 steps len2)
-              (Fn.runFn2 done attrs' steps))
-    vdom →
+              (Fn.runFn3 done node attrs' steps))
+    vdom → do
+      Fn.runFn3 done node attrs ch1
       buildVDom (VDomSpec spec) vdom
 
-  done = Fn.mkFn2 \attrs steps → do
-    Fn.runFn2 forInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt)
+  done = Fn.mkFn3 \node attrs steps → do
+    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
+    Fn.runFn2 Util.forInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt)
     Machine.halt attrs
 
 buildWidget
@@ -216,25 +206,26 @@ buildWidget
 buildWidget (VDomSpec spec) = render
   where
   render w = do
-    Step n m h ← spec.buildWidget (VDomSpec spec) w
-    pure (Step n (patch m) h)
+    res@Step n m h ← spec.buildWidget (VDomSpec spec) w
+    pure (Step n (patch res) h)
 
-  patch step = case _ of
+  patch prev@(Step node step halt) = case _ of
     Grafted g →
-      patch step (runGraft g)
+      patch prev (runGraft g)
     Widget w → do
-      Step n m h ← step w
-      pure (Step n (patch m) h)
-    vdom →
+      res@Step n m h ← step w
+      pure (Step n (patch res) h)
+    vdom → do
+      halt
       buildVDom (VDomSpec spec) vdom
 
 createElem
   ∷ ∀ eff
   . Fn.Fn3 (Maybe Namespace) ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
-createElem = Fn.mkFn3 \ns name doc →
+createElem = Fn.mkFn3 \ns (ElemName name) doc →
   case ns of
-    Nothing → Fn.runFn2 createElement name doc
-    Just n  → Fn.runFn3 createElementNS n name doc
+    Nothing → Fn.runFn2 Util.createElement name doc
+    Just (Namespace n) → Fn.runFn3 Util.createElementNS n name doc
 
 eqElemSpec
   ∷ ∀ a
@@ -247,38 +238,3 @@ eqElemSpec = Fn.mkFn2 \a b →
         Nothing, Nothing → true
         _, _ → false
     _, _ → false
-
-effPure ∷ ∀ eff a. a → Eff eff a
-effPure = pure
-
-foreign import createTextNode
-  ∷ ∀ eff
-  . Fn.Fn2 String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Node)
-
-foreign import setTextContent
-  ∷ ∀ eff
-  . Fn.Fn2 String DOM.Node (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import createElement
-  ∷ ∀ eff
-  . Fn.Fn2 ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
-
-foreign import createElementNS
-  ∷ ∀ eff
-  . Fn.Fn3 Namespace ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
-
-foreign import removeLastChild
-  ∷ ∀ eff
-  . DOM.Node → (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import insertChildIx
-  ∷ ∀ eff
-  . Fn.Fn3 Int DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import unsafeChildIx
-  ∷ ∀ eff
-  . Fn.Fn2 Int DOM.Node (Eff (dom ∷ DOM | eff) DOM.Node)
-
-foreign import childNodesLength
-  ∷ ∀ eff
-  . DOM.Node → (Eff (dom ∷ DOM | eff) Int)

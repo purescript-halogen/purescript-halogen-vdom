@@ -109,8 +109,8 @@ renderData st =
 
 buildWidget
   ∷ ∀ eff
-  . V.VDomSpec (dom ∷ DOM | eff) (Array (Prop Void)) (Exists Thunk)
-  → V.VDomMachine (dom ∷ DOM | eff) (Exists Thunk) DOM.Node
+  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  → V.VDomMachine (dom ∷ DOM, ref ∷ REF | eff) (Exists Thunk) DOM.Node
 buildWidget spec = render
   where
   render = runExists \(Thunk a render) → do
@@ -122,7 +122,7 @@ buildWidget spec = render
       then pure (V.Step node (Fn.runFn4 patch a node step halt) halt)
       else do
         V.Step node' m h ← step (render b)
-        pure (V.Step node (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
+        pure (V.Step node' (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
 
 mkSpec
   ∷ ∀ eff

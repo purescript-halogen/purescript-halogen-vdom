@@ -1,5 +1,25 @@
 "use strict";
 
+exports.unsafeGetAny = function (key, obj) {
+  return obj[key];
+};
+
+exports.unsafeHasAny = function (key, obj) {
+  return obj.hasOwnProperty(key);
+};
+
+exports.unsafeSetAny = function (key, val, obj) {
+  return function () {
+    obj[key] = val;
+  };
+};
+
+exports.unsafeDeleteAny = function (key, obj) {
+  return function () {
+    delete obj[key];
+  };
+};
+
 exports.forE = function (a, f) {
   return function () {
     var b = [];
@@ -88,4 +108,49 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
 
 exports.refEq = function (a, b) {
   return a === b;
+};
+
+exports.createTextNode = function (s, doc) {
+  return function () {
+    return doc.createTextNode(s);
+  };
+};
+
+exports.setTextContent = function (s, n) {
+  return function () {
+    n.textContent = s;
+  };
+};
+
+exports.createElement = function (name, doc) {
+  return function () {
+    return doc.createElement(name)
+  };
+};
+
+exports.createElementNS = function (ns, name, doc) {
+  return function () {
+    return doc.createElementNS(ns, name);
+  };
+};
+
+exports.insertChildIx = function (i, a, b) {
+  return function () {
+    var n = b.childNodes.item(i) || null;
+    if (n !== a) {
+      b.insertBefore(a, n);
+    }
+  };
+};
+
+exports.removeChild = function (a, b) {
+  return function () {
+    if (b && a.parentNode === b) {
+      b.removeChild(a);
+    }
+  };
+};
+
+exports.unsafeParent = function (a) {
+  return a.parentNode;
 };

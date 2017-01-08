@@ -31,27 +31,3 @@ exports.removeEventListener = function (ev, listener, el) {
     el.removeEventListener(ev, listener, false);
   };
 };
-
-exports.setProperty = function (prop, val, el) {
-  return function () {
-    el[prop] = val;
-  };
-};
-
-exports.getProperty = function (prop, el) {
-  return function () {
-    return el[prop];
-  };
-};
-
-exports.removeProperty = function (prop, el) {
-  return function () {
-    delete el[prop];
-  };
-};
-
-exports.unsafeLookup = function (key, obj) {
-  return obj[key];
-};
-
-exports.pokeMutMap = exports.setProperty;
