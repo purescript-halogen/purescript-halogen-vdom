@@ -21,22 +21,28 @@ module Halogen.VDom.Util
   , createTextNode
   , setTextContent
   , createElement
-  , createElementNS
   , insertChildIx
   , removeChild
   , unsafeParent
+  , setAttribute
+  , removeAttribute
+  , addEventListener
+  , removeEventListener
   ) where
 
 import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF)
 import Data.Function.Uncurried as Fn
+import Data.Nullable (Nullable)
 import Data.StrMap (StrMap)
 import Data.StrMap as StrMap
 import Data.StrMap.ST (STStrMap)
 import Data.StrMap.ST as STStrMap
 import DOM (DOM)
+import DOM.Event.EventTarget (EventListener) as DOM
 import DOM.Node.Types (Document, Element, Node) as DOM
+import Halogen.VDom.Types (Namespace, ElemName)
 import Unsafe.Coerce (unsafeCoerce)
 
 effPure ∷ ∀ eff a. a → Eff eff a
@@ -137,11 +143,7 @@ foreign import setTextContent
 
 foreign import createElement
   ∷ ∀ eff
-  . Fn.Fn2 String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
-
-foreign import createElementNS
-  ∷ ∀ eff
-  . Fn.Fn3 String String DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
+  . Fn.Fn3 (Nullable Namespace) ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
 
 foreign import insertChildIx
   ∷ ∀ eff
@@ -153,3 +155,15 @@ foreign import removeChild
 
 foreign import unsafeParent
   ∷ DOM.Node → DOM.Node
+
+foreign import setAttribute
+  ∷ ∀ eff. Fn.Fn4 (Nullable Namespace) String String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import removeAttribute
+  ∷ ∀ eff. Fn.Fn3 (Nullable Namespace) String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import addEventListener
+  ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import removeEventListener
+  ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)

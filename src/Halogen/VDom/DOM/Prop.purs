@@ -1,6 +1,5 @@
 module Halogen.VDom.DOM.Prop
   ( Prop(..)
-  , Namespace(..)
   , ElemRef(..)
   , PropValue
   , propFromString
@@ -16,16 +15,16 @@ import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Ref as Ref
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as StrMap
-import Data.Nullable (Nullable, toNullable)
+import Data.Nullable (toNullable)
 import Data.Function.Uncurried as Fn
-import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..), fst, snd)
 import DOM (DOM)
-import DOM.Event.EventTarget (EventListener, eventListener) as DOM
+import DOM.Event.EventTarget (eventListener) as DOM
 import DOM.Event.Types (EventType(..), Event) as DOM
 import DOM.HTML.Types (HTMLElement) as DOM
 import DOM.Node.Types (Element) as DOM
 import Halogen.VDom as V
+import Halogen.VDom.Types (Namespace(..))
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -39,10 +38,6 @@ instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
   map f (Ref g) = Ref (map f <$> g)
   map f p = unsafeCoerce p
-
-newtype Namespace = Namespace String
-
-derive instance newtypeNamespace ∷ Newtype Namespace _
 
 data ElemRef a
   = Created a
@@ -106,7 +101,7 @@ buildProp emit el = render
   applyProp events = Fn.mkFn3 \_ _ v →
     case v of
       Attribute ns attr val → do
-        Fn.runFn4 setAttribute (toNullable ns) attr val el
+        Fn.runFn4 Util.setAttribute (toNullable ns) attr val el
         pure v
       Property prop val → do
         Fn.runFn3 setProperty prop val el
@@ -118,7 +113,7 @@ buildProp emit el = render
             f' ← Ref.readRef ref
             mbEmit (f' ev)
         Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
-        Fn.runFn3 addEventListener ty listener el
+        Fn.runFn3 Util.addEventListener ty listener el
         pure v
       Ref f → do
         mbEmit (f (Created (unsafeElementToHTMLElement el)))
@@ -129,7 +124,7 @@ buildProp emit el = render
       Attribute _ _ val1, Attribute ns2 attr2 val2 →
         case val1 /= val2 of
           true → do
-            Fn.runFn4 setAttribute (toNullable ns2) attr2 val2 el
+            Fn.runFn4 Util.setAttribute (toNullable ns2) attr2 val2 el
             pure v2
           _ →
             Util.effPure v2
@@ -160,13 +155,13 @@ buildProp emit el = render
   removeProp prevEvents = Fn.mkFn2 \_ v →
     case v of
       Attribute ns attr _ →
-        Fn.runFn3 removeAttribute (toNullable ns) attr el
+        Fn.runFn3 Util.removeAttribute (toNullable ns) attr el
       Property prop _ →
         Fn.runFn2 removeProperty prop el
       Handler (DOM.EventType ty) _ → do
         let
           handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
-        Fn.runFn3 removeEventListener ty (fst handler) el
+        Fn.runFn3 Util.removeEventListener ty (fst handler) el
       Ref _ →
         Util.effUnit
 
@@ -189,15 +184,3 @@ unsafeGetProperty = Util.unsafeGetAny
 
 removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 removeProperty = Util.unsafeDeleteAny
-
-foreign import setAttribute
-  ∷ ∀ eff. Fn.Fn4 (Nullable Namespace) String String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import removeAttribute
-  ∷ ∀ eff. Fn.Fn3 (Nullable Namespace) String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import addEventListener
-  ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-
-foreign import removeEventListener
-  ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)

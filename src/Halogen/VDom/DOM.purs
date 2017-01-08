@@ -15,6 +15,7 @@ import Control.Monad.Eff (Eff, foreachE)
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
+import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
 
 import DOM (DOM)
@@ -22,7 +23,7 @@ import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
 
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (VDom(..), ElemSpec(..), ElemName(..), Namespace(..), runGraft)
+import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace(..), runGraft)
 import Halogen.VDom.Util as Util
 
 type VDomMachine eff a b = Machine (Eff eff) a b
@@ -87,7 +88,7 @@ buildElem
 buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 createElem ns1 name1 spec.document
+    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
@@ -147,7 +148,7 @@ buildKeyed
 buildKeyed (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 createElem ns1 name1 spec.document
+    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
@@ -218,14 +219,6 @@ buildWidget (VDomSpec spec) = render
     vdom → do
       halt
       buildVDom (VDomSpec spec) vdom
-
-createElem
-  ∷ ∀ eff
-  . Fn.Fn3 (Maybe Namespace) ElemName DOM.Document (Eff (dom ∷ DOM | eff) DOM.Element)
-createElem = Fn.mkFn3 \ns (ElemName name) doc →
-  case ns of
-    Nothing → Fn.runFn2 Util.createElement name doc
-    Just (Namespace n) → Fn.runFn3 Util.createElementNS n name doc
 
 eqElemSpec
   ∷ ∀ a
