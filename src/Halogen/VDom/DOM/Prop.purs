@@ -21,7 +21,6 @@ import Data.Tuple (Tuple(..), fst, snd)
 import DOM (DOM)
 import DOM.Event.EventTarget (eventListener) as DOM
 import DOM.Event.Types (EventType(..), Event) as DOM
-import DOM.HTML.Types (HTMLElement) as DOM
 import DOM.Node.Types (Element) as DOM
 import Halogen.VDom as V
 import Halogen.VDom.Types (Namespace(..))
@@ -32,7 +31,7 @@ data Prop a
   = Attribute (Maybe Namespace) String String
   | Property String PropValue
   | Handler DOM.EventType (DOM.Event → Maybe a)
-  | Ref (ElemRef DOM.HTMLElement → Maybe a)
+  | Ref (ElemRef DOM.Element → Maybe a)
 
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
@@ -91,7 +90,7 @@ buildProp emit el = render
   done ps = do
     case StrMap.lookup "ref" ps of
       Just (Ref f) → do
-        mbEmit (f (Removed (unsafeElementToHTMLElement el)))
+        mbEmit (f (Removed el))
       _ → do
         Util.effUnit
 
@@ -116,7 +115,7 @@ buildProp emit el = render
         Fn.runFn3 Util.addEventListener ty listener el
         pure v
       Ref f → do
-        mbEmit (f (Created (unsafeElementToHTMLElement el)))
+        mbEmit (f (Created el))
         pure v
 
   diffProp = Fn.mkFn2 \prevEvents events → Fn.mkFn4 \_ _ v1 v2 →
@@ -172,9 +171,6 @@ propToStrKey = case _ of
   Property prop _ → "prop/" <> prop
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
-
-unsafeElementToHTMLElement ∷ DOM.Element → DOM.HTMLElement
-unsafeElementToHTMLElement = unsafeCoerce
 
 setProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 setProperty = Util.unsafeSetAny
