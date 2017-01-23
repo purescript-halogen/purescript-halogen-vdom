@@ -106,14 +106,19 @@ buildProp emit el = render
         Fn.runFn3 setProperty prop val el
         pure v
       Handler (DOM.EventType ty) f → do
-        ref ← Ref.newRef f
-        let
-          listener = DOM.eventListener \ev → do
-            f' ← Ref.readRef ref
-            mbEmit (f' ev)
-        Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
-        Fn.runFn3 Util.addEventListener ty listener el
-        pure v
+        case Fn.runFn2 Util.unsafeGetAny ty events of
+          handler | Fn.runFn2 Util.unsafeHasAny ty events → do
+            Ref.writeRef (snd handler) f
+            pure v
+          _ → do
+            ref ← Ref.newRef f
+            let
+              listener = DOM.eventListener \ev → do
+                f' ← Ref.readRef ref
+                mbEmit (f' ev)
+            Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
+            Fn.runFn3 Util.addEventListener ty listener el
+            pure v
       Ref f → do
         mbEmit (f (Created el))
         pure v
@@ -138,7 +143,7 @@ buildProp emit el = render
                 Fn.runFn3 setProperty prop2 val2 el
                 pure v2
               _ →
-                pure v2
+                Util.effPure v2
           _, _ → do
             Fn.runFn3 setProperty prop2 val2 el
             pure v2
