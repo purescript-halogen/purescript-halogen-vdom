@@ -30,6 +30,8 @@ type VDomMachine eff a b = Machine (Eff eff) a b
 
 type VDomStep eff a b = Eff eff (Step (Eff eff) a b)
 
+-- | Widget machines recursively reference the configured spec to potentially
+-- | enable recursive trees of Widgets.
 newtype VDomSpec eff a w = VDomSpec
   { buildWidget ∷ VDomSpec eff a w → VDomMachine eff w DOM.Node
   , buildAttributes ∷ DOM.Element → VDomMachine eff a Unit
@@ -38,6 +40,15 @@ newtype VDomSpec eff a w = VDomSpec
 
 type VDomEffects eff = (dom ∷ DOM | eff)
 
+-- | Starts an initial `VDom` machine by providing a `VDomSpec`.
+-- |
+-- | ```purescript
+-- | main = do
+-- |   machine1 ← buildVDom spec vdomTree1
+-- |   machine2 ← Machine.step machine1 vdomTree2
+-- |   machine3 ← Machine.step machine2 vdomTree3
+-- |   ...
+-- | ````
 buildVDom
   ∷ ∀ eff a w
   . VDomSpec (VDomEffects eff) a w

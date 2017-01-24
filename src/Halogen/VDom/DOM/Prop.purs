@@ -27,6 +27,8 @@ import Halogen.VDom.Types (Namespace(..))
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
 
+-- | Attributes, properties, event handlers, and element lifecycles.
+-- | Parameterized by the type of handlers outputs.
 data Prop a
   = Attribute (Maybe Namespace) String String
   | Property String PropValue
@@ -60,6 +62,9 @@ propFromInt = unsafeCoerce
 propFromNumber ∷ Number → PropValue
 propFromNumber = unsafeCoerce
 
+-- | A `Machine`` for applying attributes, properties, and event handlers.
+-- | An emitter effect must be provided to respond to events. For example,
+-- | to allow arbitrary effects in event handlers, one could use `id`.
 buildProp
   ∷ ∀ eff a
   . (a → Eff (ref ∷ REF, dom ∷ DOM | eff) Unit)

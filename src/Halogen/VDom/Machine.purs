@@ -21,12 +21,15 @@ data Step m a b = Step b (Machine m a b) (m Unit)
 instance functorStep ∷ Functor m ⇒ Functor (Step m a) where
   map f (Step x m d) = Step (f x) (m >>> map (map f)) d
 
+-- | Returns the output value of a `Step`.
 extract ∷ ∀ m a b. Step m a b → b
 extract (Step x _ _) = x
 
+-- | Runs the next step.
 step ∷ ∀ m a b. Step m a b → a → m (Step m a b)
 step (Step _ m _) = m
 
+-- | Runs the finalizer associated with a `Step`
 halt ∷ ∀ m a b. Step m a b → m Unit
 halt (Step _ _ h) = h
 
