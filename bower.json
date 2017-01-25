@@ -29,12 +29,12 @@
     "purescript-maps": "^2.0.1",
     "purescript-maybe": "^2.0.1",
     "purescript-unsafe-coerce": "^2.0.0",
-    "purescript-bifunctors": "^2.0.0"
+    "purescript-bifunctors": "^2.0.0",
+    "purescript-refs": "^2.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^2.0.0",
     "purescript-js-timers": "^2.0.0",
-    "purescript-exists": "^2.0.0",
-    "purescript-refs": "^2.0.0"
+    "purescript-exists": "^2.0.0"
   }
 }
