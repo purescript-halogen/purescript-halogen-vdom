@@ -1,6 +1,7 @@
 module Halogen.VDom.DOM.Prop
   ( Prop(..)
   , ElemRef(..)
+  , RefLabel(..)
   , PropValue
   , propFromString
   , propFromBoolean
@@ -13,10 +14,12 @@ import Prelude
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Ref as Ref
-import Data.Maybe (Maybe(..), maybe)
-import Data.StrMap as StrMap
-import Data.Nullable (toNullable)
 import Data.Function.Uncurried as Fn
+import Data.Generic (class Generic)
+import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (class Newtype)
+import Data.Nullable (toNullable)
+import Data.StrMap as StrMap
 import Data.Tuple (Tuple(..), fst, snd)
 import DOM (DOM)
 import DOM.Event.EventTarget (eventListener) as DOM
@@ -33,11 +36,10 @@ data Prop a
   = Attribute (Maybe Namespace) String String
   | Property String PropValue
   | Handler DOM.EventType (DOM.Event → Maybe a)
-  | Ref (ElemRef DOM.Element → Maybe a)
+  | Ref RefLabel
 
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
-  map f (Ref g) = Ref (map f <$> g)
   map f p = unsafeCoerce p
 
 data ElemRef a
@@ -47,6 +49,13 @@ data ElemRef a
 instance functorElemRef ∷ Functor ElemRef where
   map f (Created a) = Created (f a)
   map f (Removed a) = Removed (f a)
+
+newtype RefLabel = RefLabel String
+
+derive instance newtypeRefLabel ∷ Newtype RefLabel _
+derive newtype instance eqRefLabel ∷ Eq RefLabel
+derive newtype instance ordRefLabel ∷ Ord RefLabel
+derive instance genericRefLabel ∷ Generic RefLabel
 
 foreign import data PropValue ∷ *
 
@@ -68,9 +77,10 @@ propFromNumber = unsafeCoerce
 buildProp
   ∷ ∀ eff a
   . (a → Eff (ref ∷ REF, dom ∷ DOM | eff) Unit)
+  → (RefLabel → ElemRef DOM.Element → Eff (ref ∷ REF, dom ∷ DOM | eff) Unit)
   → DOM.Element
   → V.VDomMachine (ref ∷ REF, dom ∷ DOM | eff) (Array (Prop a)) Unit
-buildProp emit el = render
+buildProp emit handleRef el = render
   where
   render ps1 = do
     events ← Util.newMutMap
@@ -94,8 +104,8 @@ buildProp emit el = render
 
   done ps = do
     case StrMap.lookup "ref" ps of
-      Just (Ref f) → do
-        mbEmit (f (Removed el))
+      Just (Ref label) → do
+        handleRef label (Removed el)
       _ → do
         Util.effUnit
 
@@ -124,8 +134,8 @@ buildProp emit el = render
             Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
             Fn.runFn3 Util.addEventListener ty listener el
             pure v
-      Ref f → do
-        mbEmit (f (Created el))
+      Ref label → do
+        handleRef label (Created el)
         pure v
 
   diffProp = Fn.mkFn2 \prevEvents events → Fn.mkFn4 \_ _ v1 v2 →
