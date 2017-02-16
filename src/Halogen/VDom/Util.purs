@@ -28,6 +28,8 @@ module Halogen.VDom.Util
   , removeAttribute
   , addEventListener
   , removeEventListener
+  , JsUndefined
+  , jsUndefined
   ) where
 
 import Prelude
@@ -167,3 +169,7 @@ foreign import addEventListener
 
 foreign import removeEventListener
   ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+
+foreign import data JsUndefined ∷ *
+
+foreign import jsUndefined ∷ JsUndefined

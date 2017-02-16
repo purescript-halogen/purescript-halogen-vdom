@@ -189,4 +189,5 @@ unsafeGetProperty ∷ Fn.Fn2 String DOM.Element PropValue
 unsafeGetProperty = Util.unsafeGetAny
 
 removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-removeProperty = Util.unsafeDeleteAny
+removeProperty = Fn.mkFn2 \key el →
+  Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el

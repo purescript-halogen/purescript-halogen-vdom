@@ -184,3 +184,5 @@ exports.removeEventListener = function (ev, listener, el) {
     el.removeEventListener(ev, listener, false);
   };
 };
+
+exports.jsUndefined = void 0;
