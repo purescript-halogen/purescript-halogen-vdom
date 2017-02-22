@@ -16,6 +16,7 @@ import Control.Monad.Eff.Ref as Ref
 import Data.Maybe (Maybe(..), maybe)
 import Data.StrMap as StrMap
 import Data.Nullable (toNullable)
+import Data.Foreign (typeOf)
 import Data.Function.Uncurried as Fn
 import Data.Tuple (Tuple(..), fst, snd)
 import DOM (DOM)
@@ -190,4 +191,6 @@ unsafeGetProperty = Util.unsafeGetAny
 
 removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 removeProperty = Fn.mkFn2 \key el →
-  Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
+  case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
+    "string" → Fn.runFn3 Util.unsafeSetAny key "" el
+    _        → Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
