@@ -88,7 +88,8 @@ buildText (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done node = do
-    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
+    parent ← pure (Util.unsafeParent node)
+    Fn.runFn2 Util.removeChild node parent
 
 buildElem
   ∷ ∀ eff a w
@@ -130,7 +131,7 @@ buildElem (VDomSpec spec) = render
               res@Step n' m' h' ← step vdom
               Fn.runFn3 Util.insertChildIx ix n' node
               pure res
-            onThis = Fn.mkFn2 \ix (res@Step n _ halt) → halt
+            onThis = Fn.mkFn2 \ix (Step n _ halt) → halt
             onThat = Fn.mkFn2 \ix vdom → do
               res@Step n m h ← buildVDom (VDomSpec spec) vdom
               Fn.runFn3 Util.insertChildIx ix n node
@@ -146,7 +147,8 @@ buildElem (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn3 \node attrs steps → do
-    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
+    parent ← pure (Util.unsafeParent node)
+    Fn.runFn2 Util.removeChild node parent
     foreachE steps Machine.halt
     Machine.halt attrs
 
@@ -206,7 +208,8 @@ buildKeyed (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn3 \node attrs steps → do
-    Fn.runFn2 Util.removeChild node (Util.unsafeParent node)
+    parent ← pure (Util.unsafeParent node)
+    Fn.runFn2 Util.removeChild node parent
     Fn.runFn2 Util.forInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt)
     Machine.halt attrs
 
