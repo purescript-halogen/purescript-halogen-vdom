@@ -70,7 +70,7 @@ buildText
 buildText (VDomSpec spec) = render
   where
   render s = do
-    node ← Fn.runFn2 Util.createTextNode s spec.document
+    node ← pure (Fn.runFn2 Util.unsafeCreateTextNode s spec.document)
     pure (Step node (Fn.runFn2 patch node s) (done node))
 
   patch = Fn.mkFn2 \node s1 → case _ of
@@ -81,15 +81,15 @@ buildText (VDomSpec spec) = render
       case s1 == s2 of
         true → pure res
         _ → do
-          Fn.runFn2 Util.setTextContent s2 node
+          _ ← pure (Fn.runFn2 Util.unsafeSetTextContent s2 node)
           pure res
     vdom → do
       done node
       buildVDom (VDomSpec spec) vdom
 
   done node = do
-    parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
+    _ ← pure (Fn.runFn2 Util.unsafeRemoveChild node (Util.unsafeParent node))
+    pure unit
 
 buildElem
   ∷ ∀ eff a w
@@ -100,14 +100,14 @@ buildElem
 buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
+    el ← pure (Fn.runFn3 Util.unsafeCreateElement (toNullable ns1) name1 spec.document)
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
         res@Step n m h ← buildVDom (VDomSpec spec) child
-        Fn.runFn3 Util.insertChildIx ix n node
+        _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix n node)
         pure res
-    steps ← Fn.runFn2 Util.forE ch1 onChild
+    steps ← pure (Fn.runFn2 Util.unsafeForE ch1 onChild)
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
@@ -129,14 +129,14 @@ buildElem (VDomSpec spec) = render
           let
             onThese = Fn.mkFn3 \ix (prev@Step n step halt) vdom → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix n' node)
               pure res
             onThis = Fn.mkFn2 \ix (Step n _ halt) → halt
             onThat = Fn.mkFn2 \ix vdom → do
               res@Step n m h ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n node
+              _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix n node)
               pure res
-          steps ← Fn.runFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
+          steps ← pure (Fn.runFn5 Util.unsafeDiffWithIxE ch1 ch2 onThese onThis onThat)
           attrs' ← Machine.step attrs as2
           pure
             (Step node
@@ -147,8 +147,7 @@ buildElem (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn3 \node attrs steps → do
-    parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
+    _ ← pure (Fn.runFn2 Util.unsafeRemoveChild node (Util.unsafeParent node))
     foreachE steps Machine.halt
     Machine.halt attrs
 
@@ -161,14 +160,14 @@ buildKeyed
 buildKeyed (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
+    el ← pure (Fn.runFn3 Util.unsafeCreateElement (toNullable ns1) name1 spec.document)
     let
       node = DOM.elementToNode el
       onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
         res@Step n m h ← buildVDom (VDomSpec spec) vdom
-        Fn.runFn3 Util.insertChildIx ix n node
+        _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix n node)
         pure res
-    steps ← Fn.runFn3 Util.strMapWithIxE ch1 fst onChild
+    steps ← pure (Fn.runFn3 Util.unsafeStrMapWithIxE ch1 fst onChild)
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
@@ -190,14 +189,14 @@ buildKeyed (VDomSpec spec) = render
           let
             onThese = Fn.mkFn4 \k ix' (Step n step _) (Tuple _ vdom) → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix' n' node
+              _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix' n' node)
               pure res
             onThis = Fn.mkFn2 \k (Step n _ halt) → halt
             onThat = Fn.mkFn3 \k ix (Tuple _ vdom) → do
               res@Step n' m' h' ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              _ ← pure (Fn.runFn3 Util.unsafeInsertChildIx ix n' node)
               pure res
-          steps ← Fn.runFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+          steps ← pure (Fn.runFn6 Util.unsafeDiffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat)
           attrs' ← Machine.step attrs as2
           pure
             (Step node
@@ -208,9 +207,8 @@ buildKeyed (VDomSpec spec) = render
       buildVDom (VDomSpec spec) vdom
 
   done = Fn.mkFn3 \node attrs steps → do
-    parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
-    Fn.runFn2 Util.forInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt)
+    _ ← pure (Fn.runFn2 Util.unsafeRemoveChild node (Util.unsafeParent node))
+    _ ← pure (Fn.runFn2 Util.unsafeForInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt))
     Machine.halt attrs
 
 buildWidget

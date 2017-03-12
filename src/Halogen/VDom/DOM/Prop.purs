@@ -74,20 +74,20 @@ buildProp
 buildProp emit el = render
   where
   render ps1 = do
-    events ← Util.newMutMap
-    ps1' ← Fn.runFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp events)
+    events ← pure Util.unsafeNewMutMap
+    ps1' ← pure (Fn.runFn3 Util.unsafeStrMapWithIxE ps1 propToStrKey (applyProp events))
     pure
       (V.Step unit
         (Fn.runFn2 patch (Util.unsafeFreeze events) ps1')
         (done ps1'))
 
   patch = Fn.mkFn2 \prevEvents ps1 → \ps2 → do
-    events ← Util.newMutMap
+    events ← pure Util.unsafeNewMutMap
     let
       onThese = Fn.runFn2 diffProp prevEvents events
       onThis = removeProp prevEvents
       onThat = applyProp events
-    ps2' ← Fn.runFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
+    ps2' ← pure (Fn.runFn6 Util.unsafeDiffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat)
     pure
       (V.Step unit
         (Fn.runFn2 patch (Util.unsafeFreeze events) ps2')
@@ -106,10 +106,10 @@ buildProp emit el = render
   applyProp events = Fn.mkFn3 \_ _ v →
     case v of
       Attribute ns attr val → do
-        Fn.runFn4 Util.setAttribute (toNullable ns) attr val el
+        _ ← pure (Fn.runFn4 Util.unsafeSetAttribute (toNullable ns) attr val el)
         pure v
       Property prop val → do
-        Fn.runFn3 setProperty prop val el
+        _ ← pure (Fn.runFn3 unsafeSetProperty prop val el)
         pure v
       Handler (DOM.EventType ty) f → do
         case Fn.runFn2 Util.unsafeGetAny ty events of
@@ -122,8 +122,8 @@ buildProp emit el = render
               listener = DOM.eventListener \ev → do
                 f' ← Ref.readRef ref
                 mbEmit (f' ev)
-            Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
-            Fn.runFn3 Util.addEventListener ty listener el
+            _ ← pure (Fn.runFn3 Util.unsafePokeMutMap ty (Tuple listener ref) events)
+            _ ← pure (Fn.runFn3 Util.unsafeAddEventListener ty listener el)
             pure v
       Ref f → do
         mbEmit (f (Created el))
@@ -134,7 +134,7 @@ buildProp emit el = render
       Attribute _ _ val1, Attribute ns2 attr2 val2 →
         case val1 /= val2 of
           true → do
-            Fn.runFn4 Util.setAttribute (toNullable ns2) attr2 val2 el
+            _ ← pure (Fn.runFn4 Util.unsafeSetAttribute (toNullable ns2) attr2 val2 el)
             pure v2
           _ →
             Util.effPure v2
@@ -146,32 +146,33 @@ buildProp emit el = render
             let elVal = Fn.runFn2 unsafeGetProperty "value" el
             case not (Fn.runFn2 Util.refEq elVal val2) of
               true → do
-                Fn.runFn3 setProperty prop2 val2 el
+                _ ← pure (Fn.runFn3 unsafeSetProperty prop2 val2 el)
                 pure v2
               _ →
                 Util.effPure v2
           _, _ → do
-            Fn.runFn3 setProperty prop2 val2 el
+            _ ← pure (Fn.runFn3 unsafeSetProperty prop2 val2 el)
             pure v2
       Handler _ _, Handler (DOM.EventType ty) f → do
-        let
-          handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
+        handler ← pure (Fn.runFn2 Util.unsafeLookup ty prevEvents)
         Ref.writeRef (snd handler) f
-        Fn.runFn3 Util.pokeMutMap ty handler events
+        _ ← pure (Fn.runFn3 Util.unsafePokeMutMap ty handler events)
         pure v2
       _, _ →
         Util.effPure v2
 
   removeProp prevEvents = Fn.mkFn2 \_ v →
     case v of
-      Attribute ns attr _ →
-        Fn.runFn3 Util.removeAttribute (toNullable ns) attr el
-      Property prop _ →
-        Fn.runFn2 removeProperty prop el
+      Attribute ns attr _ → do
+        _ ← pure (Fn.runFn3 Util.unsafeRemoveAttribute (toNullable ns) attr el)
+        pure unit
+      Property prop _ → do
+        _ ← pure (Fn.runFn2 removeProperty prop el)
+        pure unit
       Handler (DOM.EventType ty) _ → do
-        let
-          handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
-        Fn.runFn3 Util.removeEventListener ty (fst handler) el
+        handler ← pure (Fn.runFn2 Util.unsafeLookup ty prevEvents)
+        _ ← pure (Fn.runFn3 Util.unsafeRemoveEventListener ty (fst handler) el)
+        pure unit
       Ref _ →
         Util.effUnit
 
@@ -183,8 +184,8 @@ propToStrKey = case _ of
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
 
-setProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-setProperty = Util.unsafeSetAny
+unsafeSetProperty ∷ Fn.Fn3 String PropValue DOM.Element Unit
+unsafeSetProperty = Util.unsafeSetAny
 
 unsafeGetProperty ∷ Fn.Fn2 String DOM.Element PropValue
 unsafeGetProperty = Util.unsafeGetAny
@@ -192,5 +193,9 @@ unsafeGetProperty = Util.unsafeGetAny
 removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 removeProperty = Fn.mkFn2 \key el →
   case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
-    "string" → Fn.runFn3 Util.unsafeSetAny key "" el
-    _        → Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
+    "string" → do
+      _ ← pure (Fn.runFn3 Util.unsafeSetAny key "" el)
+      pure unit
+    _ → do
+      _ ← pure (Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el)
+      pure unit
