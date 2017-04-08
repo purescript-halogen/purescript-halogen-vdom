@@ -170,6 +170,6 @@ foreign import addEventListener
 foreign import removeEventListener
   ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 
-foreign import data JsUndefined ∷ *
+foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined

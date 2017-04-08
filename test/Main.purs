@@ -1,13 +1,13 @@
 module Test.Main where
 
 import Prelude
-import Control.Monad.Eff (Eff)
+import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Ref as Ref
 import Control.Monad.Eff.Timer as Timer
 import Data.Exists (Exists, mkExists, runExists)
 import Data.Maybe (Maybe(..), isNothing)
-import Data.Nullable (toMaybe)
+import Data.Newtype (wrap)
 import Data.Foldable (for_, traverse_)
 import Data.Function.Uncurried as Fn
 import Data.Tuple (Tuple)
@@ -113,15 +113,15 @@ buildWidget
   → V.VDomMachine (dom ∷ DOM, ref ∷ REF | eff) (Exists Thunk) DOM.Node
 buildWidget spec = render
   where
-  render = runExists \(Thunk a render) → do
-    V.Step node m h ← V.buildVDom spec (render a)
+  render = runExists \(Thunk a render') → do
+    V.Step node m h ← V.buildVDom spec (render' a)
     pure (V.Step node (Fn.runFn4 patch (unsafeCoerce a) node m h) h)
 
-  patch = Fn.mkFn4 \a node step halt → runExists \(Thunk b render) →
+  patch = Fn.mkFn4 \a node step halt → runExists \(Thunk b render') →
     if Fn.runFn2 refEq a b
       then pure (V.Step node (Fn.runFn4 patch a node step halt) halt)
       else do
-        V.Step node' m h ← step (render b)
+        V.Step node' m h ← step (render' b)
         pure (V.Step node' (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
 
 mkSpec
@@ -134,7 +134,7 @@ mkSpec document = V.VDomSpec
   , document
   }
 
-foreign import data DBMON ∷ !
+foreign import data DBMON ∷ Effect
 
 foreign import getData ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) State
 
@@ -153,7 +153,7 @@ mkRenderQueue
   → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
 mkRenderQueue spec parent render initialValue = do
   initMachine ← V.buildVDom spec (render initialValue)
-  DOM.appendChild (V.extract initMachine) parent
+  _ ← DOM.appendChild (V.extract initMachine) parent
   ref ← Ref.newRef initMachine
   val ← Ref.newRef Nothing
   pure \a → do
@@ -175,7 +175,7 @@ mkRenderQueue'
   → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
 mkRenderQueue' spec parent render initialValue = do
   initMachine ← V.buildVDom spec (render initialValue)
-  DOM.appendChild (V.extract initMachine) parent
+  _ ← DOM.appendChild (V.extract initMachine) parent
   ref ← Ref.newRef initMachine
   pure \v → do
     machine ← Ref.readRef ref
@@ -186,8 +186,8 @@ main :: ∀ eff. Eff (ref ∷ REF, dom ∷ DOM, dbmon ∷ DBMON, timer ∷ Timer
 main = do
   win ← DOM.window
   doc ← DOM.document win
-  bod ← DOM.querySelector "body" (DOM.htmlDocumentToParentNode doc)
-  for_ (toMaybe bod) \body → do
+  bod ← DOM.querySelector (wrap "body") (DOM.htmlDocumentToParentNode doc)
+  for_ bod \body → do
     let spec = mkSpec (DOM.htmlDocumentToDocument doc)
     pushQueue ← mkRenderQueue' spec (DOM.elementToNode body) renderData initialState
     let
