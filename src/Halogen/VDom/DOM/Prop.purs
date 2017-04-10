@@ -49,7 +49,7 @@ instance functorElemRef ∷ Functor ElemRef where
   map f (Created a) = Created (f a)
   map f (Removed a) = Removed (f a)
 
-foreign import data PropValue ∷ *
+foreign import data PropValue ∷ Type
 
 propFromString ∷ String → PropValue
 propFromString = unsafeCoerce

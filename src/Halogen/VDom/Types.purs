@@ -41,7 +41,7 @@ instance bifunctorVDom ∷ Bifunctor VDom where
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
 
-foreign import data Graft ∷ * → * → *
+foreign import data Graft ∷ Type → Type → Type
 
 instance functorGraft ∷ Functor (Graft a) where
   map g = unGraft \(Graft f' g' a) → graft (Graft f' (g <<< g') a)
