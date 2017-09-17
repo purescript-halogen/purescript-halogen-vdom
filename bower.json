@@ -34,7 +34,6 @@
     "purescript-foreign": "^4.0.0"
   },
   "devDependencies": {
-    "purescript-js-timers": "^3.0.0",
-    "purescript-exists": "^3.0.0"
+    "purescript-js-timers": "^3.0.0"
   }
 }
