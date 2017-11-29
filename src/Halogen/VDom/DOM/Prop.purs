@@ -193,4 +193,7 @@ removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) U
 removeProperty = Fn.mkFn2 \key el →
   case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
     "string" → Fn.runFn3 Util.unsafeSetAny key "" el
-    _        → Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
+    _        → case key of
+      "rowSpan" → Fn.runFn3 Util.unsafeSetAny key 1 el
+      "colSpan" → Fn.runFn3 Util.unsafeSetAny key 1 el
+      _ → Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
