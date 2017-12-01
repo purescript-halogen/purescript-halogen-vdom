@@ -5,12 +5,11 @@ import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Ref as Ref
 import Control.Monad.Eff.Timer as Timer
-import Data.Exists (Exists, mkExists, runExists)
 import Data.Maybe (Maybe(..), isNothing)
 import Data.Newtype (wrap)
 import Data.Foldable (for_, traverse_)
 import Data.Function.Uncurried as Fn
-import Data.Tuple (Tuple)
+import Data.Tuple as DT
 import DOM (DOM)
 import DOM.HTML (window) as DOM
 import DOM.HTML.Types (htmlDocumentToDocument, htmlDocumentToParentNode) as DOM
@@ -19,8 +18,8 @@ import DOM.Node.Types (Document, Node, elementToNode) as DOM
 import DOM.Node.Node (appendChild) as DOM
 import DOM.Node.ParentNode (querySelector) as DOM
 import Halogen.VDom as V
-import Halogen.VDom.Util (refEq)
 import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp)
+import Halogen.VDom.Thunk as T
 import Unsafe.Coerce (unsafeCoerce)
 
 infixr 1 prop as :=
@@ -28,9 +27,11 @@ infixr 1 prop as :=
 prop ∷ ∀ a. String → String → Prop a
 prop key val = Property key (propFromString val)
 
-type VDom = V.VDom (Array (Prop Void)) (Exists Thunk)
+type VDom' a = V.VDom (Array (Prop a)) (T.Thunk Thunked a)
 
-data Thunk b = Thunk b (b → VDom)
+type VDom = VDom' Void
+
+newtype Thunked a = Thunked (VDom' a)
 
 type State = Array Database
 
@@ -57,22 +58,22 @@ initialState = []
 elem ∷ ∀ a w. String → a → Array (V.VDom a w) → V.VDom a w
 elem n a = V.Elem (V.ElemSpec Nothing (V.ElemName n) a)
 
-keyed ∷ ∀ a w. String → a → Array (Tuple String (V.VDom a w)) → V.VDom a w
+keyed ∷ ∀ a w. String → a → Array (DT.Tuple String (V.VDom a w)) → V.VDom a w
 keyed n a = V.Keyed (V.ElemSpec Nothing (V.ElemName n) a)
 
 text ∷ ∀ a w. String → V.VDom a w
 text = V.Text
 
 thunk ∷ ∀ a. (a → VDom) → a → VDom
-thunk render val = V.Widget (mkExists (Thunk val render))
+thunk render val = V.Widget (Fn.runFn2 T.thunk1 ((unsafeCoerce ∷ (a → VDom) → a → Thunked Void) render) val)
 
 renderData ∷ State → VDom
 renderData st =
   elem "div" []
     [ elem "table"
         [ "className" := "table table-striped latest data" ]
-        -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (thunk renderDatabase db)) st) ]
-        -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (renderDatabase db)) st) ]
+        -- [ keyed "tbody" [] (map (\db → DT.Tuple db.dbname (thunk renderDatabase db)) st) ]
+        -- [ keyed "tbody" [] (map (\db → DT.Tuple db.dbname (renderDatabase db)) st) ]
         -- [ elem "tbody" [] (map (thunk renderDatabase) st) ]
         [ elem "tbody" [] (map renderDatabase st) ]
     ]
@@ -107,29 +108,12 @@ renderData st =
           ]
       ]
 
-buildWidget
-  ∷ ∀ eff
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
-  → V.VDomMachine (dom ∷ DOM, ref ∷ REF | eff) (Exists Thunk) DOM.Node
-buildWidget spec = render
-  where
-  render = runExists \(Thunk a render') → do
-    V.Step node m h ← V.buildVDom spec (render' a)
-    pure (V.Step node (Fn.runFn4 patch (unsafeCoerce a) node m h) h)
-
-  patch = Fn.mkFn4 \a node step halt → runExists \(Thunk b render') →
-    if Fn.runFn2 refEq a b
-      then pure (V.Step node (Fn.runFn4 patch a node step halt) halt)
-      else do
-        V.Step node' m h ← step (render' b)
-        pure (V.Step node' (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
-
 mkSpec
   ∷ ∀ eff
   . DOM.Document
-  → V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  → V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (T.Thunk Thunked Void)
 mkSpec document = V.VDomSpec
-  { buildWidget
+  { buildWidget: T.buildThunk V.buildVDom \(Thunked v) → v
   , buildAttributes: buildProp (const (pure unit))
   , document
   }
@@ -146,7 +130,7 @@ foreign import requestAnimationFrame ∷ ∀ eff. Eff (dom ∷ DOM | eff) Unit �
 
 mkRenderQueue
   ∷ ∀ eff a
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (T.Thunk Thunked Void)
   → DOM.Node
   → (a → VDom)
   → a
@@ -168,7 +152,7 @@ mkRenderQueue spec parent render initialValue = do
 
 mkRenderQueue'
   ∷ ∀ eff a
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (T.Thunk Thunked Void)
   → DOM.Node
   → (a → VDom)
   → a
