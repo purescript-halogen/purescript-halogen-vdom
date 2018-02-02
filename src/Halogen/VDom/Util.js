@@ -112,7 +112,7 @@ exports.refEq = function (a, b) {
 
 exports.createTextNode = function (s, doc) {
   return function () {
-    return doc.createTextNode(s);
+    return {type: "textView", children: [], props: {text: s}}
   };
 };
 
@@ -124,20 +124,13 @@ exports.setTextContent = function (s, n) {
 
 exports.createElement = function (ns, name, doc) {
   return function () {
-    if (ns != null) {
-      return doc.createElementNS(ns, name);
-    } else {
-      return doc.createElement(name)
-    }
+    return {type: name, children: [], props: {}}
   };
 };
 
 exports.insertChildIx = function (i, a, b) {
   return function () {
-    var n = b.childNodes.item(i) || null;
-    if (n !== a) {
-      b.insertBefore(a, n);
-    }
+    b.children.splice(i, 0, a);
   };
 };
 
