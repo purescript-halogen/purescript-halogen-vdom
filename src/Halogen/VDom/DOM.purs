@@ -105,7 +105,7 @@ buildElem (VDomSpec spec) = render
       node = DOM.elementToNode el
       onChild = Fn.mkFn2 \ix child → do
         res@Step n m h ← buildVDom (VDomSpec spec) child
-        Fn.runFn3 Util.insertChildIx ix n node
+        Fn.runFn4 Util.insertChildIx "render" ix n node
         pure res
     steps ← Fn.runFn2 Util.forE ch1 onChild
     attrs ← spec.buildAttributes el as1
@@ -129,12 +129,12 @@ buildElem (VDomSpec spec) = render
           let
             onThese = Fn.mkFn3 \ix (prev@Step n step halt) vdom → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              Fn.runFn4 Util.insertChildIx "patch" ix n' node
               pure res
             onThis = Fn.mkFn2 \ix (Step n _ halt) → halt
             onThat = Fn.mkFn2 \ix vdom → do
               res@Step n m h ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n node
+              Fn.runFn4 Util.insertChildIx "patch" ix n node
               pure res
           steps ← Fn.runFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
           attrs' ← Machine.step attrs as2
@@ -166,7 +166,7 @@ buildKeyed (VDomSpec spec) = render
       node = DOM.elementToNode el
       onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
         res@Step n m h ← buildVDom (VDomSpec spec) vdom
-        Fn.runFn3 Util.insertChildIx ix n node
+        Fn.runFn4 Util.insertChildIx "render" ix n node
         pure res
     steps ← Fn.runFn3 Util.strMapWithIxE ch1 fst onChild
     attrs ← spec.buildAttributes el as1
@@ -190,12 +190,12 @@ buildKeyed (VDomSpec spec) = render
           let
             onThese = Fn.mkFn4 \k ix' (Step n step _) (Tuple _ vdom) → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix' n' node
+              Fn.runFn4 Util.insertChildIx "patch" ix' n' node
               pure res
             onThis = Fn.mkFn2 \k (Step n _ halt) → halt
             onThat = Fn.mkFn3 \k ix (Tuple _ vdom) → do
               res@Step n' m' h' ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              Fn.runFn4 Util.insertChildIx "patch" ix n' node
               pure res
           steps ← Fn.runFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
           attrs' ← Machine.step attrs as2

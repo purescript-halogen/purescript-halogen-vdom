@@ -129,8 +129,12 @@ exports.createElement = function (ns, name, doc) {
   };
 };
 
-exports.insertChildIx = function (i, a, b) {
+exports.insertChildIx = function (type, i, a, b) {
   return function () {
+    if (type == "patch") {
+      window.addChild(a, b, i);
+    }
+
     a.parentNode = b;
     b.children.splice(i, 0, a);
   };
@@ -149,7 +153,8 @@ exports.removeChild = function (a, b) {
     }
 
     if (childIndex > -1) {
-      window.removeChild(a, b);
+      window.removeChild(a, b, childIndex);
+      
       b.children.splice(childIndex, 1);
     }
   };

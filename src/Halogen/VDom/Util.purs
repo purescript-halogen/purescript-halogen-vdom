@@ -149,7 +149,7 @@ foreign import createElement
 
 foreign import insertChildIx
   ∷ ∀ eff
-  . Fn.Fn3 Int DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
+  . Fn.Fn4 String Int DOM.Node DOM.Node (Eff (dom ∷ DOM | eff) Unit)
 
 foreign import removeChild
   ∷ ∀ eff
