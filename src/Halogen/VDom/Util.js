@@ -21,6 +21,7 @@ exports.unsafeDeleteAny = function (key, obj) {
 };
 
 exports.forE = function (a, f) {
+
   return function () {
     var b = [];
     for (var i = 0; i < a.length; i++) {
@@ -130,14 +131,26 @@ exports.createElement = function (ns, name, doc) {
 
 exports.insertChildIx = function (i, a, b) {
   return function () {
+    a.parentNode = b;
     b.children.splice(i, 0, a);
   };
 };
 
 exports.removeChild = function (a, b) {
   return function () {
+    var childIndex = -1;
+
     if (b && a.parentNode === b) {
-      b.removeChild(a);
+      for (var i=0; i<b.children.length; i++) {
+        if (b.children[i].props.id == a.props.id) {
+          childIndex = i;
+        }
+      }
+    }
+
+    if (childIndex > -1) {
+      window.removeChild(a, b);
+      b.children.splice(childIndex, 1);
     }
   };
 };
@@ -157,7 +170,7 @@ exports.setAttribute = function (ns, attr, val, el) {
 };
 
 exports.removeAttribute = function (ns, attr, el) {
-  return function () {
+  return unction () {
     if (ns != null) {
       el.removeAttributeNS(ns, attr);
     } else {
