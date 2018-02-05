@@ -154,14 +154,18 @@ exports.removeChild = function (a, b) {
 
     if (childIndex > -1) {
       window.removeChild(a, b, childIndex);
-      
+      a.props.__removed = true;
       b.children.splice(childIndex, 1);
     }
   };
 };
 
 exports.unsafeParent = function (a) {
-  return a.parentNode;
+  if (a.parentNode.props.__removed) {
+    return null;
+  } else {
+    return a.parentNode;
+  }
 };
 
 exports.setAttribute = function (ns, attr, val, el) {
