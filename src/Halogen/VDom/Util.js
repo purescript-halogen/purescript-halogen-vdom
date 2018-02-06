@@ -180,7 +180,7 @@ exports.setAttribute = function (ns, attr, val, el) {
 };
 
 exports.removeAttribute = function (ns, attr, el) {
-  return unction () {
+  return function () {
     if (ns != null) {
       el.removeAttributeNS(ns, attr);
     } else {
