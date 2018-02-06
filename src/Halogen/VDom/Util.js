@@ -162,6 +162,7 @@ exports.removeChild = function (a, b) {
 
 exports.unsafeParent = function (a) {
   if (a.parentNode.props.__removed) {
+    a.props.__removed = true;
     return null;
   } else {
     return a.parentNode;
@@ -196,7 +197,7 @@ exports.addEventListener = function (ev, listener, el) {
 
 exports.removeEventListener = function (ev, listener, el) {
   return function () {
-    el.removeEventListener(ev, listener, false);
+     el.removeEventListener(ev, listener, false);
   };
 };
 
