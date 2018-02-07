@@ -131,12 +131,16 @@ exports.createElement = function (ns, name, doc) {
 
 exports.insertChildIx = function (type, i, a, b) {
   return function () {
-    if (type == "patch") {
-      window.addChild(a, b, i);
-    }
+    var n = (b.children[i]) || null;
 
-    a.parentNode = b;
-    b.children.splice(i, 0, a);
+    if (n && n.props.id !== a.props.id) {
+      if (type == "patch") {
+        window.addChild(a, b, i);
+      }
+
+      a.parentNode = b;
+      b.children.splice(i, 0, a);
+    }
   };
 };
 
