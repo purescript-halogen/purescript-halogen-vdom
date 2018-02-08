@@ -131,9 +131,9 @@ exports.createElement = function (ns, name, doc) {
 
 exports.insertChildIx = function (type, i, a, b) {
   return function () {
-    var n = (b.children[i]) || null;
+    var n = (b.children[i]) || {props: {id: "-1"}};
 
-    if (n && n.props.id !== a.props.id) {
+    if (n.props.id !== a.props.id) {
       if (type == "patch") {
         window.addChild(a, b, i);
       }
