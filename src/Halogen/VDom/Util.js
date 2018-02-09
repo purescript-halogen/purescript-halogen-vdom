@@ -148,7 +148,7 @@ exports.removeChild = function (a, b) {
   return function () {
     var childIndex = -1;
 
-    if (b && a.parentNode === b) {
+    if (b && a.parentNode.props.id === b.props.id) {
       for (var i=0; i<b.children.length; i++) {
         if (b.children[i].props.id == a.props.id) {
           childIndex = i;
