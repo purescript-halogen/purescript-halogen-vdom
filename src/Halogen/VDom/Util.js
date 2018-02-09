@@ -131,12 +131,16 @@ exports.createElement = function (ns, name, doc) {
 
 exports.insertChildIx = function (type, i, a, b) {
   return function () {
-    if (type == "patch") {
-      window.addChild(a, b, i);
-    }
+    var n = (b.children[i]) || {props: {id: "-1"}};
 
-    a.parentNode = b;
-    b.children.splice(i, 0, a);
+    if (n.props.id !== a.props.id) {
+      if (type == "patch") {
+        window.addChild(a, b, i);
+      }
+
+      a.parentNode = b;
+      b.children.splice(i, 0, a);
+    }
   };
 };
 
@@ -144,7 +148,7 @@ exports.removeChild = function (a, b) {
   return function () {
     var childIndex = -1;
 
-    if (b && a.parentNode === b) {
+    if (b && a.parentNode.props.id === b.props.id) {
       for (var i=0; i<b.children.length; i++) {
         if (b.children[i].props.id == a.props.id) {
           childIndex = i;
@@ -180,7 +184,7 @@ exports.setAttribute = function (ns, attr, val, el) {
 };
 
 exports.removeAttribute = function (ns, attr, el) {
-  return unction () {
+  return function () {
     if (ns != null) {
       el.removeAttributeNS(ns, attr);
     } else {
