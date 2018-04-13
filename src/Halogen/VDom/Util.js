@@ -125,7 +125,7 @@ exports.setTextContent = function (s, n) {
 
 exports.createElement = function (ns, name, doc) {
   return function () {
-    return {type: name, children: [], props: {}}
+    return {type: name, children: [], props: {}, __ref: window.createPrestoElement()}
   };
 };
 
