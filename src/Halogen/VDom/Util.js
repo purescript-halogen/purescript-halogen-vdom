@@ -131,9 +131,9 @@ exports.createElement = function (ns, name, doc) {
 
 exports.insertChildIx = function (type, i, a, b) {
   return function () {
-    var n = (b.children[i]) || {props: {id: "-1"}};
+    var n = (b.children[i]) || {__ref: {__id: "-1"}};
 
-    if (n.props.id !== a.props.id) {
+    if (n.__ref.__id !== a.__ref.__id) {
       if (type == "patch") {
         window.addChild(a, b, i);
       }
@@ -148,9 +148,9 @@ exports.removeChild = function (a, b) {
   return function () {
     var childIndex = -1;
 
-    if (b && a.parentNode.props.id === b.props.id) {
+    if (b && a.parentNode.__ref.__id === b.__ref.__id) {
       for (var i=0; i<b.children.length; i++) {
-        if (b.children[i].props.id == a.props.id) {
+        if (b.children[i].__ref.__id == a.__ref.__id) {
           childIndex = i;
         }
       }
