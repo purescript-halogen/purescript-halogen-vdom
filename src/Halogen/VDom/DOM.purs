@@ -10,35 +10,34 @@ module Halogen.VDom.DOM
   ) where
 
 import Prelude
-import Control.Monad.Eff (Eff, foreachE)
 
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
-
-import DOM (DOM)
-import DOM.Node.Types (Element, Node, Document, elementToNode) as DOM
-
+import Effect (Effect, foreachE)
+import Effect.Uncurried as EFn
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace(..), runGraft)
 import Halogen.VDom.Util as Util
+import Web.DOM.Document (Document) as DOM
+import Web.DOM.Element (Element) as DOM
+import Web.DOM.Element as DOMElement
+import Web.DOM.Node (Node) as DOM
 
-type VDomMachine eff a b = Machine (Eff eff) a b
+type VDomMachine a b = Machine Effect a b
 
-type VDomStep eff a b = Eff eff (Step (Eff eff) a b)
+type VDomStep a b = Effect (Step Effect a b)
 
 -- | Widget machines recursively reference the configured spec to potentially
 -- | enable recursive trees of Widgets.
-newtype VDomSpec eff a w = VDomSpec
-  { buildWidget ∷ VDomSpec eff a w → VDomMachine eff w DOM.Node
-  , buildAttributes ∷ DOM.Element → VDomMachine eff a Unit
+newtype VDomSpec a w = VDomSpec
+  { buildWidget ∷ VDomSpec a w → VDomMachine w DOM.Node
+  , buildAttributes ∷ DOM.Element → VDomMachine a Unit
   , document ∷ DOM.Document
   }
-
-type VDomEffects eff = (dom ∷ DOM | eff)
 
 -- | Starts an initial `VDom` machine by providing a `VDomSpec`.
 -- |
@@ -49,10 +48,7 @@ type VDomEffects eff = (dom ∷ DOM | eff)
 -- |   machine3 ← Machine.step machine2 vdomTree3
 -- |   ...
 -- | ````
-buildVDom
-  ∷ ∀ eff a w
-  . VDomSpec (VDomEffects eff) a w
-  → VDomMachine (VDomEffects eff) (VDom a w) DOM.Node
+buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine (VDom a w) DOM.Node
 buildVDom spec = render
   where
   render = case _ of
@@ -62,15 +58,11 @@ buildVDom spec = render
     Widget w → buildWidget spec w
     Grafted g → buildVDom spec (runGraft g)
 
-buildText
-  ∷ ∀ eff a w
-  . VDomSpec (VDomEffects eff) a w
-  → String
-  → VDomStep (VDomEffects eff) (VDom a w) DOM.Node
+buildText ∷ ∀ a w. VDomSpec a w → String → VDomStep (VDom a w) DOM.Node
 buildText (VDomSpec spec) = render
   where
   render s = do
-    node ← Fn.runFn2 Util.createTextNode s spec.document
+    node ← EFn.runEffectFn2 Util.createTextNode s spec.document
     pure (Step node (Fn.runFn2 patch node s) (done node))
 
   patch = Fn.mkFn2 \node s1 → case _ of
@@ -81,7 +73,7 @@ buildText (VDomSpec spec) = render
       case s1 == s2 of
         true → pure res
         _ → do
-          Fn.runFn2 Util.setTextContent s2 node
+          EFn.runEffectFn2 Util.setTextContent s2 node
           pure res
     vdom → do
       done node
@@ -89,25 +81,25 @@ buildText (VDomSpec spec) = render
 
   done node = do
     parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
+    EFn.runEffectFn2 Util.removeChild node parent
 
 buildElem
-  ∷ ∀ eff a w
-  . VDomSpec (VDomEffects eff) a w
+  ∷ ∀ a w
+  . VDomSpec a w
   → ElemSpec a
   → Array (VDom a w)
-  → VDomStep (VDomEffects eff) (VDom a w) DOM.Node
+  → VDomStep (VDom a w) DOM.Node
 buildElem (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
+    el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
     let
-      node = DOM.elementToNode el
-      onChild = Fn.mkFn2 \ix child → do
+      node = DOMElement.toNode el
+      onChild = EFn.mkEffectFn2 \ix child → do
         res@Step n m h ← buildVDom (VDomSpec spec) child
-        Fn.runFn3 Util.insertChildIx ix n node
+        EFn.runEffectFn3 Util.insertChildIx ix n node
         pure res
-    steps ← Fn.runFn2 Util.forE ch1 onChild
+    steps ← EFn.runEffectFn2 Util.forE ch1 onChild
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
@@ -127,16 +119,16 @@ buildElem (VDomSpec spec) = render
               (Fn.runFn3 done node attrs' ch1))
         _, _ → do
           let
-            onThese = Fn.mkFn3 \ix (prev@Step n step halt) vdom → do
+            onThese = EFn.mkEffectFn3 \ix (prev@Step n step halt) vdom → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              EFn.runEffectFn3 Util.insertChildIx ix n' node
               pure res
-            onThis = Fn.mkFn2 \ix (Step n _ halt) → halt
-            onThat = Fn.mkFn2 \ix vdom → do
+            onThis = EFn.mkEffectFn2 \ix (Step n _ halt) → halt
+            onThat = EFn.mkEffectFn2 \ix vdom → do
               res@Step n m h ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n node
+              EFn.runEffectFn3 Util.insertChildIx ix n node
               pure res
-          steps ← Fn.runFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
+          steps ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
           attrs' ← Machine.step attrs as2
           pure
             (Step node
@@ -148,27 +140,27 @@ buildElem (VDomSpec spec) = render
 
   done = Fn.mkFn3 \node attrs steps → do
     parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
+    EFn.runEffectFn2 Util.removeChild node parent
     foreachE steps Machine.halt
     Machine.halt attrs
 
 buildKeyed
-  ∷ ∀ eff a w
-  . VDomSpec (VDomEffects eff) a w
+  ∷ ∀ a w
+  . VDomSpec a w
   → ElemSpec a
   → Array (Tuple String (VDom a w))
-  → VDomStep (VDomEffects eff) (VDom a w) DOM.Node
+  → VDomStep (VDom a w) DOM.Node
 buildKeyed (VDomSpec spec) = render
   where
   render es1@(ElemSpec ns1 name1 as1) ch1 = do
-    el ← Fn.runFn3 Util.createElement (toNullable ns1) name1 spec.document
+    el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
     let
-      node = DOM.elementToNode el
-      onChild = Fn.mkFn3 \k ix (Tuple _ vdom) → do
+      node = DOMElement.toNode el
+      onChild = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do
         res@Step n m h ← buildVDom (VDomSpec spec) vdom
-        Fn.runFn3 Util.insertChildIx ix n node
+        EFn.runEffectFn3 Util.insertChildIx ix n node
         pure res
-    steps ← Fn.runFn3 Util.strMapWithIxE ch1 fst onChild
+    steps ← EFn.runEffectFn3 Util.strMapWithIxE ch1 fst onChild
     attrs ← spec.buildAttributes el as1
     pure
       (Step node
@@ -188,16 +180,16 @@ buildKeyed (VDomSpec spec) = render
               (Fn.runFn3 done node attrs' ch1))
         _, len2 → do
           let
-            onThese = Fn.mkFn4 \k ix' (Step n step _) (Tuple _ vdom) → do
+            onThese = EFn.mkEffectFn4 \k ix' (Step n step _) (Tuple _ vdom) → do
               res@Step n' m' h' ← step vdom
-              Fn.runFn3 Util.insertChildIx ix' n' node
+              EFn.runEffectFn3 Util.insertChildIx ix' n' node
               pure res
-            onThis = Fn.mkFn2 \k (Step n _ halt) → halt
-            onThat = Fn.mkFn3 \k ix (Tuple _ vdom) → do
+            onThis = EFn.mkEffectFn2 \k (Step n _ halt) → halt
+            onThat = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do
               res@Step n' m' h' ← buildVDom (VDomSpec spec) vdom
-              Fn.runFn3 Util.insertChildIx ix n' node
+              EFn.runEffectFn3 Util.insertChildIx ix n' node
               pure res
-          steps ← Fn.runFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+          steps ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
           attrs' ← Machine.step attrs as2
           pure
             (Step node
@@ -209,15 +201,11 @@ buildKeyed (VDomSpec spec) = render
 
   done = Fn.mkFn3 \node attrs steps → do
     parent ← pure (Util.unsafeParent node)
-    Fn.runFn2 Util.removeChild node parent
-    Fn.runFn2 Util.forInE steps (Fn.mkFn2 \_ (Step _ _ halt) → halt)
+    EFn.runEffectFn2 Util.removeChild node parent
+    EFn.runEffectFn2 Util.forInE steps (EFn.mkEffectFn2 \_ (Step _ _ halt) → halt)
     Machine.halt attrs
 
-buildWidget
-  ∷ ∀ eff a w
-  . VDomSpec (VDomEffects eff) a w
-  → w
-  → VDomStep (VDomEffects eff) (VDom a w) DOM.Node
+buildWidget ∷ ∀ a w. VDomSpec a w → w → VDomStep (VDom a w) DOM.Node
 buildWidget (VDomSpec spec) = render
   where
   render w = do
@@ -234,9 +222,7 @@ buildWidget (VDomSpec spec) = render
       halt
       buildVDom (VDomSpec spec) vdom
 
-eqElemSpec
-  ∷ ∀ a
-  . Fn.Fn2 (ElemSpec a) (ElemSpec a) Boolean
+eqElemSpec ∷ ∀ a. Fn.Fn2 (ElemSpec a) (ElemSpec a) Boolean
 eqElemSpec = Fn.mkFn2 \a b →
   case a, b of
     ElemSpec ns1 name1 _, ElemSpec ns2 name2 _ | name1 == name2 →
