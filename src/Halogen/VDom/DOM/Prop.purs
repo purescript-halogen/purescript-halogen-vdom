@@ -77,7 +77,7 @@ buildProp emit el = render
   where
   render ps1 = do
     events ← Util.newMutMap
-    ps1' ← Fn.runFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp events)
+    ps1' ← Fn.runFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp "render" events)
     pure
       (V.Step unit
         (Fn.runFn2 patch (Util.unsafeFreeze events) ps1')
@@ -88,8 +88,8 @@ buildProp emit el = render
     let
       onThese = Fn.runFn2 diffProp prevEvents events
       onThis = removeProp prevEvents
-      onThat = applyProp events
-    ps2' ← Fn.runFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
+      onThat = applyProp "patch" events
+    ps2' ← Fn.runFn7 Util.diffPropWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat el
     pure
       (V.Step unit
         (Fn.runFn2 patch (Util.unsafeFreeze events) ps2')
@@ -105,13 +105,15 @@ buildProp emit el = render
   mbEmit =
     maybe Util.effUnit emit
 
-  applyProp events = Fn.mkFn3 \_ _ v →
+  applyProp pr events = Fn.mkFn3 \_ _ v →
     case v of
       Attribute ns attr val → do
         Fn.runFn4 Util.setAttribute (toNullable ns) attr val el
         pure v
       Property prop val → do
-        Fn.runFn3 setProperty prop val el
+        case pr of
+             "render" -> Fn.runFn3 setProperty prop val el
+             _ -> Fn.runFn3 addProperty prop val el
         pure v
       Handler (DOM.EventType ty) f → do
         case Fn.runFn2 Util.unsafeGetAny ty events of
@@ -151,12 +153,12 @@ buildProp emit el = render
             let elVal = Fn.runFn2 unsafeGetProperty "value" el
             case not (Fn.runFn2 Util.refEq elVal val2) of
               true → do
-                Fn.runFn3 setProperty prop2 val2 el
+                Fn.runFn3 updateProperty prop2 val2 el
                 pure v2
               _ →
                 Util.effPure v2
           _, _ → do
-            Fn.runFn3 setProperty prop2 val2 el
+            Fn.runFn3 updateProperty prop2 val2 el
             pure v2
       Handler _ _, Handler (DOM.EventType ty) f → do
         let
@@ -191,16 +193,22 @@ propToStrKey = case _ of
   BHandler _ _ -> "bhandler"
 
 setProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
-setProperty = Util.unsafeSetAny
+setProperty = Util.unsafeSetProp
+
+addProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+addProperty = Util.addProperty
+
+updateProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+updateProperty = Util.updateProperty
 
 unsafeGetProperty ∷ Fn.Fn2 String DOM.Element PropValue
-unsafeGetProperty = Util.unsafeGetAny
+unsafeGetProperty = Util.unsafeGetProp
 
 removeProperty ∷ ∀ eff. Fn.Fn2 String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 removeProperty = Fn.mkFn2 \key el →
-  case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
-    "string" → Fn.runFn3 Util.unsafeSetAny key "" el
+  case typeOf (Fn.runFn2 Util.unsafeGetProp key el) of
+    "string" → Fn.runFn3 Util.removeProperty key "" el
     _        → case key of
       "rowSpan" → Fn.runFn3 Util.unsafeSetAny key 1 el
       "colSpan" → Fn.runFn3 Util.unsafeSetAny key 1 el
-      _ → Fn.runFn3 Util.unsafeSetAny key Util.jsUndefined el
+      _ → Fn.runFn3 Util.removeProperty key Util.jsUndefined el

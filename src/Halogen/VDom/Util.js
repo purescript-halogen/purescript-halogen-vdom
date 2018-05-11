@@ -1,11 +1,36 @@
 "use strict";
 
+// removeEventListener
+// removeAttribute
+// removeProperty
+// pokeMutMap
+// addEventListener
+// setAttribute
+
 exports.unsafeGetAny = function (key, obj) {
   return obj[key];
 };
 
+exports.unsafeGetProp = function (key, obj) {
+  if (obj.props)
+    return obj.props[key];
+  else return;
+};
+
 exports.unsafeHasAny = function (key, obj) {
   return obj.hasOwnProperty(key);
+};
+
+exports.updateProperty = function (key, val, obj) {
+  return function () {
+    window.updateProperty(obj, {value0: key, value1: val})
+  };
+};
+
+exports.addProperty = function (key, val, obj) {
+  return function () {
+    window.addProperty(obj, {value0: key, value1: val})
+  };
 };
 
 exports.unsafeSetAny = function (key, val, obj) {
@@ -14,9 +39,22 @@ exports.unsafeSetAny = function (key, val, obj) {
   };
 };
 
+exports.unsafeSetProp = function (key, val, obj) {
+  return function () {
+    obj.props[key] = val;
+  };
+};
+
+exports.removeProperty = function (key, val, obj) {
+  return function () {
+    obj.props[key] = val;
+    delete obj.props[key];
+  };
+};
+
 exports.unsafeDeleteAny = function (key, obj) {
   return function () {
-    delete obj[key];
+    delete obj.props[key];
   };
 };
 
@@ -103,6 +141,32 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
       }
       f2(k, o1[k])();
     }
+    return o2;
+  };
+};
+
+exports.diffPropWithKeyAndIxE = function (o1, as, fk, f1, f2, f3, el) {
+  return function () {
+    var o2 = {};
+    var replace = false;
+    for (var i = 0; i < as.length; i++) {
+      var a = as[i];
+      var k = fk(a);
+      if (o1.hasOwnProperty(k)) {
+        o2[k] = f1(k, i, o1[k], a)();
+      } else {
+        o2[k] = f3(k, i, a)();
+      }
+    }
+    for (var k in o1) {
+      if (k in o2) {
+        continue;
+      }
+      replace = true;
+      f2(k, o1[k])();
+    }
+    if (replace)
+      window.replaceView(el);
     return o2;
   };
 };
@@ -195,13 +259,15 @@ exports.removeAttribute = function (ns, attr, el) {
 
 exports.addEventListener = function (ev, listener, el) {
   return function () {
-    el.addEventListener(ev, listener, false);
+    // el.addEventListener(ev, listener, false);
+		el.props[ev] = listener;
   };
 };
 
 exports.removeEventListener = function (ev, listener, el) {
   return function () {
-     el.removeEventListener(ev, listener, false);
+     // el.removeEventListener(ev, listener, false);
+     delete el.props[ev];
   };
 };
 

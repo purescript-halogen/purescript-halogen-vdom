@@ -8,14 +8,17 @@ module Halogen.VDom.Util
   , unsafeFreeze
   , unsafeLookup
   , unsafeGetAny
+  , unsafeGetProp
   , unsafeHasAny
   , unsafeSetAny
+  , unsafeSetProp
   , unsafeDeleteAny
   , forE
   , forInE
   , replicateE
   , diffWithIxE
   , diffWithKeyAndIxE
+  , diffPropWithKeyAndIxE
   , strMapWithIxE
   , refEq
   , createTextNode
@@ -28,6 +31,9 @@ module Halogen.VDom.Util
   , removeAttribute
   , addEventListener
   , removeEventListener
+  , addProperty
+  , updateProperty
+  , removeProperty
   , JsUndefined
   , jsUndefined
   ) where
@@ -70,13 +76,28 @@ unsafeFreeze = unsafeCoerce
 unsafeLookup ∷ ∀ a. Fn.Fn2 String (StrMap a) a
 unsafeLookup = unsafeGetAny
 
+foreign import unsafeGetProp
+  ∷ ∀ a b. Fn.Fn2 String a b
+
 foreign import unsafeGetAny
   ∷ ∀ a b. Fn.Fn2 String a b
 
 foreign import unsafeHasAny
   ∷ ∀ a. Fn.Fn2 String a Boolean
 
+foreign import addProperty
+  ∷ ∀ eff a b. Fn.Fn3 String a b (Eff eff Unit)
+
+foreign import updateProperty
+  ∷ ∀ eff a b. Fn.Fn3 String a b (Eff eff Unit)
+
+foreign import unsafeSetProp
+  ∷ ∀ eff a b. Fn.Fn3 String a b (Eff eff Unit)
+
 foreign import unsafeSetAny
+  ∷ ∀ eff a b. Fn.Fn3 String a b (Eff eff Unit)
+
+foreign import removeProperty
   ∷ ∀ eff a b. Fn.Fn3 String a b (Eff eff Unit)
 
 foreign import unsafeDeleteAny
@@ -122,6 +143,18 @@ foreign import diffWithKeyAndIxE
       (Fn.Fn4 String Int a b (Eff eff c))
       (Fn.Fn2 String a (Eff eff d))
       (Fn.Fn3 String Int b (Eff eff c))
+      (Eff eff (StrMap.StrMap c))
+
+foreign import diffPropWithKeyAndIxE
+  ∷ ∀ eff a b c d el
+  . Fn.Fn7
+      (StrMap.StrMap a)
+      (Array b)
+      (b → String)
+      (Fn.Fn4 String Int a b (Eff eff c))
+      (Fn.Fn2 String a (Eff eff d))
+      (Fn.Fn3 String Int b (Eff eff c))
+      el
       (Eff eff (StrMap.StrMap c))
 
 foreign import strMapWithIxE
