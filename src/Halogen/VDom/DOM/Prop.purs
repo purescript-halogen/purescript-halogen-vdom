@@ -127,7 +127,7 @@ buildProp emit el = render
                 f' ← Ref.readRef ref
                 mbEmit (f' ev)
             Fn.runFn3 Util.pokeMutMap ty (Tuple listener ref) events
-            Fn.runFn3 Util.addEventListener ty listener el
+            Fn.runFn4 Util.addEventListener pr ty listener el
             pure v
       Ref f → do
         mbEmit (f (Created el))

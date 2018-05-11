@@ -198,7 +198,7 @@ foreign import removeAttribute
   ∷ ∀ eff. Fn.Fn3 (Nullable Namespace) String DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 
 foreign import addEventListener
-  ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
+  ∷ ∀ eff. Fn.Fn4 String String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 
 foreign import removeEventListener
   ∷ ∀ eff. Fn.Fn3 String (DOM.EventListener (dom ∷ DOM | eff)) DOM.Element (Eff (dom ∷ DOM | eff) Unit)

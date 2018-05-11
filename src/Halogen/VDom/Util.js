@@ -257,10 +257,13 @@ exports.removeAttribute = function (ns, attr, el) {
   };
 };
 
-exports.addEventListener = function (ev, listener, el) {
+exports.addEventListener = function (pr, ev, listener, el) {
   return function () {
     // el.addEventListener(ev, listener, false);
-		el.props[ev] = listener;
+    el.props[ev] = listener;
+    if(pr == "patch") {
+      window.replaceView(el);
+    }
   };
 };
 
