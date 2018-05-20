@@ -123,7 +123,7 @@ exports.removeChild = function (a, b) {
   }
 };
 
-exports.unsafeParent = function (a) {
+exports.parentNode = function (a) {
   return a.parentNode;
 };
 

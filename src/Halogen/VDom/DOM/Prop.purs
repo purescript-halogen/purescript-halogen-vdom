@@ -12,7 +12,7 @@ module Halogen.VDom.DOM.Prop
 import Prelude
 
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..), maybe)
+import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
@@ -70,10 +70,10 @@ buildProp
   ∷ ∀ a
   . (a → Effect Unit)
   → DOM.Element
-  → V.VDomMachine (Array (Prop a)) Unit
+  → V.Machine (Array (Prop a)) Unit
 buildProp emit el = render
   where
-  render ps1 = do
+  render = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
     ps1' ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp events)
     pure
@@ -81,27 +81,29 @@ buildProp emit el = render
         (Fn.runFn2 patch (Util.unsafeFreeze events) ps1')
         (done ps1'))
 
-  patch = Fn.mkFn2 \prevEvents ps1 → \ps2 → do
-    events ← Util.newMutMap
-    let
-      onThese = Fn.runFn2 diffProp prevEvents events
-      onThis = removeProp prevEvents
-      onThat = applyProp events
-    ps2' ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
-    pure
-      (V.Step unit
-        (Fn.runFn2 patch (Util.unsafeFreeze events) ps2')
-        (done ps2'))
+  patch = Fn.mkFn2 \prevEvents ps1 →
+    EFn.mkEffectFn1 \ps2 → do
+      events ← Util.newMutMap
+      let
+        onThese = Fn.runFn2 diffProp prevEvents events
+        onThis = removeProp prevEvents
+        onThat = applyProp events
+      ps2' ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
+      pure
+        (V.Step unit
+          (Fn.runFn2 patch (Util.unsafeFreeze events) ps2')
+          (done ps2'))
 
-  done ps = do
+  done ps =
     case Object.lookup "ref" ps of
-      Just (Ref f) → do
-        mbEmit (f (Removed el))
-      _ → do
-        Util.effUnit
+      Just (Ref f) →
+        EFn.runEffectFn1 mbEmit (f (Removed el))
+      _ →
+        Util.effectUnit
 
-  mbEmit =
-    maybe Util.effUnit emit
+  mbEmit = EFn.mkEffectFn1 case _ of
+    Just a → emit a
+    _ → pure unit
 
   applyProp events = EFn.mkEffectFn3 \_ _ v →
     case v of
@@ -120,35 +122,33 @@ buildProp emit el = render
             ref ← Ref.new f
             listener ← DOM.eventListener \ev → do
               f' ← Ref.read ref
-              mbEmit (f' ev)
+              EFn.runEffectFn1 mbEmit (f' ev)
             EFn.runEffectFn3 Util.pokeMutMap ty (Tuple listener ref) events
             EFn.runEffectFn3 Util.addEventListener ty listener el
             pure v
       Ref f → do
-        mbEmit (f (Created el))
+        EFn.runEffectFn1 mbEmit (f (Created el))
         pure v
 
   diffProp = Fn.mkFn2 \prevEvents events → EFn.mkEffectFn4 \_ _ v1 v2 →
     case v1, v2 of
       Attribute _ _ val1, Attribute ns2 attr2 val2 →
-        case val1 /= val2 of
-          true → do
+        if val1 == val2
+          then pure v2
+          else do
             EFn.runEffectFn4 Util.setAttribute (toNullable ns2) attr2 val2 el
             pure v2
-          _ →
-            Util.effPure v2
       Property _ val1, Property prop2 val2 →
         case Fn.runFn2 Util.refEq val1 val2, prop2 of
           true, _ →
-            Util.effPure v2
+            pure v2
           _, "value" → do
             let elVal = Fn.runFn2 unsafeGetProperty "value" el
-            case not (Fn.runFn2 Util.refEq elVal val2) of
-              true → do
+            if Fn.runFn2 Util.refEq elVal val2
+              then pure v2
+              else do
                 EFn.runEffectFn3 setProperty prop2 val2 el
                 pure v2
-              _ →
-                Util.effPure v2
           _, _ → do
             EFn.runEffectFn3 setProperty prop2 val2 el
             pure v2
@@ -159,7 +159,7 @@ buildProp emit el = render
         EFn.runEffectFn3 Util.pokeMutMap ty handler events
         pure v2
       _, _ →
-        Util.effPure v2
+        pure v2
 
   removeProp prevEvents = EFn.mkEffectFn2 \_ v →
     case v of
@@ -172,7 +172,7 @@ buildProp emit el = render
           handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
         EFn.runEffectFn3 Util.removeEventListener ty (fst handler) el
       Ref _ →
-        Util.effUnit
+        pure unit
 
 propToStrKey ∷ ∀ i. Prop i → String
 propToStrKey = case _ of

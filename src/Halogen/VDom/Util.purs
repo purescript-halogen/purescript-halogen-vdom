@@ -1,6 +1,6 @@
 module Halogen.VDom.Util
-  ( effPure
-  , effUnit
+  ( effectPure
+  , effectUnit
   , newMutMap
   , pokeMutMap
   , deleteMutMap
@@ -22,7 +22,7 @@ module Halogen.VDom.Util
   , createElement
   , insertChildIx
   , removeChild
-  , unsafeParent
+  , parentNode
   , setAttribute
   , removeAttribute
   , addEventListener
@@ -48,11 +48,11 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
 
-effPure ∷ ∀ a. a → Effect a
-effPure = pure
+effectPure ∷ ∀ a. a → Effect a
+effectPure = pure
 
-effUnit ∷ Effect Unit
-effUnit = pure unit
+effectUnit ∷ Effect Unit
+effectUnit = pure unit
 
 newMutMap ∷ ∀ r a. Effect (STObject r a)
 newMutMap = unsafeCoerce STObject.new
@@ -148,8 +148,8 @@ foreign import insertChildIx
 foreign import removeChild
   ∷ EFn.EffectFn2 DOM.Node DOM.Node Unit
 
-foreign import unsafeParent
-  ∷ DOM.Node → DOM.Node
+foreign import parentNode
+  ∷ EFn.EffectFn1 DOM.Node DOM.Node
 
 foreign import setAttribute
   ∷ EFn.EffectFn4 (Nullable Namespace) String String DOM.Element Unit
