@@ -18,7 +18,7 @@ import Effect (foreachE)
 import Effect.Uncurried as EFn
 import Halogen.VDom.Machine (Step(..), Machine)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (VDom(..), ElemSpec(..), Namespace(..), runGraft)
+import Halogen.VDom.Types (ElemName(..), ElemSpec(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
@@ -212,7 +212,7 @@ buildWidget = render
 eqElemSpec ∷ ∀ a. Fn.Fn2 (ElemSpec a) (ElemSpec a) Boolean
 eqElemSpec = Fn.mkFn2 \a b →
   case a, b of
-    ElemSpec ns1 name1 _, ElemSpec ns2 name2 _ | name1 == name2 →
+    ElemSpec ns1 (ElemName name1) _, ElemSpec ns2 (ElemName name2) _ | name1 == name2 →
       case ns1, ns2 of
         Just (Namespace ns1'), Just (Namespace ns2') | ns1' == ns2' → true
         Nothing, Nothing → true
