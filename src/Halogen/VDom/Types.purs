@@ -12,7 +12,6 @@ module Halogen.VDom.Types
 
 import Prelude
 import Data.Bifunctor (class Bifunctor, bimap)
-import Data.Generic (class Generic)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple)
@@ -34,7 +33,7 @@ data VDom a w
 instance functorVDom ∷ Functor (VDom a) where
   map g (Text a) = Text a
   map g (Grafted a) = Grafted (map g a)
-  map g a = Grafted (graft (Graft id g a))
+  map g a = Grafted (graft (Graft identity g a))
 
 instance bifunctorVDom ∷ Bifunctor VDom where
   bimap f g (Text a) = Text a
@@ -84,21 +83,16 @@ data ElemSpec a = ElemSpec (Maybe Namespace) ElemName a
 
 derive instance eqElemSpec ∷ Eq a ⇒ Eq (ElemSpec a)
 derive instance ordElemSpec ∷ Ord a ⇒ Ord (ElemSpec a)
-derive instance genericElemSpec ∷ Generic a ⇒ Generic (ElemSpec a)
-
-instance functorElemSpec ∷ Functor ElemSpec where
-  map f (ElemSpec ns name a) = ElemSpec ns name (f a)
+derive instance functorElemSpec ∷ Functor ElemSpec
 
 newtype ElemName = ElemName String
 
 derive instance newtypeElemName ∷ Newtype ElemName _
 derive newtype instance eqElemName ∷ Eq ElemName
 derive newtype instance ordElemName ∷ Ord ElemName
-derive instance genericElemName ∷ Generic ElemName
 
 newtype Namespace = Namespace String
 
 derive instance newtypeNamespace ∷ Newtype Namespace _
 derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
-derive instance genericNamespace ∷ Generic Namespace
