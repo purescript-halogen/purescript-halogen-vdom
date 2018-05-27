@@ -22,19 +22,19 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "#compiler/0.12",
-    "purescript-effect": "#compiler/0.12",
-    "purescript-tuples": "#compiler/0.12",
-    "purescript-web-html": "#compiler/0.12",
-    "purescript-foreign-object": "#compiler/0.12",
-    "purescript-maybe": "#compiler/0.12",
-    "purescript-unsafe-coerce": "#compiler/0.12",
-    "purescript-bifunctors": "#compiler/0.12",
-    "purescript-refs": "#compiler/0.12",
-    "purescript-foreign": "#compiler/0.12"
+    "purescript-prelude": "^4.0.0",
+    "purescript-effect": "^2.0.0",
+    "purescript-tuples": "^5.0.0",
+    "purescript-web-html": "^1.0.0",
+    "purescript-foreign-object": "^1.0.0",
+    "purescript-maybe": "^4.0.0",
+    "purescript-unsafe-coerce": "^4.0.0",
+    "purescript-bifunctors": "^4.0.0",
+    "purescript-refs": "^4.1.0",
+    "purescript-foreign": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-js-timers": "#compiler/0.12",
-    "purescript-exists": "#compiler/0.12"
+    "purescript-js-timers": "^4.0.0",
+    "purescript-exists": "^4.0.0"
   }
 }
