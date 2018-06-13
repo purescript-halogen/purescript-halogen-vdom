@@ -11,6 +11,7 @@ module Halogen.VDom.Util
   , unsafeSetAny
   , unsafeDeleteAny
   , forE
+  , forEachE
   , forInE
   , replicateE
   , diffWithIxE
@@ -86,6 +87,13 @@ foreign import forE
       (Array a)
       (EFn.EffectFn2 Int a b)
       (Array b)
+
+foreign import forEachE
+  ∷ ∀ a
+  . EFn.EffectFn2
+      (Array a)
+      (EFn.EffectFn1 a Unit)
+      Unit
 
 foreign import forInE
   ∷ ∀ a
