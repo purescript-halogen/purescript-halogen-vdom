@@ -56,10 +56,10 @@ initialState ∷ State
 initialState = []
 
 elem ∷ ∀ a w. String → a → Array (V.VDom a w) → V.VDom a w
-elem n a = V.Elem (V.ElemSpec Nothing (V.ElemName n) a)
+elem n a = V.Elem Nothing (V.ElemName n) a
 
 keyed ∷ ∀ a w. String → a → Array (Tuple String (V.VDom a w)) → V.VDom a w
-keyed n a = V.Keyed (V.ElemSpec Nothing (V.ElemName n) a)
+keyed n a = V.Keyed Nothing (V.ElemName n) a
 
 text ∷ ∀ a w. String → V.VDom a w
 text = V.Text
@@ -108,6 +108,11 @@ renderData st =
           ]
       ]
 
+type WidgetState a w =
+  { t :: Exists Thunk
+  , step :: V.Step a w
+  }
+
 buildWidget
   ∷ V.VDomSpec (Array (Prop Void)) (Exists Thunk)
   → V.Machine (Exists Thunk) DOM.Node
@@ -115,17 +120,23 @@ buildWidget spec = render
   where
   render = EFn.mkEffectFn1 \t → case unsafeCoerce t of
     Thunk a render' → do
-      V.Step node m h ← EFn.runEffectFn1 (V.buildVDom spec) (render' a)
-      pure (V.Step node (Fn.runFn4 patch (unsafeCoerce a) node m h) h)
+      step ← EFn.runEffectFn1 (V.buildVDom spec) (render' a)
+      let state = { t, step }
+      pure (V.mkStep (V.Step (V.extract step) state patch done))
 
-  patch = Fn.mkFn4 \a node step halt →
-    EFn.mkEffectFn1 \t → case unsafeCoerce t of
-      Thunk b render' →
-        if Fn.runFn2 refEq a b
-          then pure (V.Step node (Fn.runFn4 patch a node step halt) halt)
+  patch = EFn.mkEffectFn2 \state t →
+    case unsafeCoerce state.t, unsafeCoerce t of
+      Thunk a render1, Thunk b render2 →
+        if Fn.runFn2 refEq a b && Fn.runFn2 refEq render1 render2
+          then
+            pure (V.mkStep (V.Step (V.extract state.step) state patch done))
           else do
-            V.Step node' m h ← EFn.runEffectFn1 step (render' b)
-            pure (V.Step node' (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
+            step ← EFn.runEffectFn2 V.step state.step (render2 b)
+            let nextState = { t, step }
+            pure (V.mkStep (V.Step (V.extract step) nextState patch done))
+
+  done = EFn.mkEffectFn1 \state → do
+    EFn.runEffectFn1 V.halt state.step
 
 mkSpec
   ∷ DOM.Document
@@ -162,7 +173,7 @@ mkRenderQueue spec parent render initialValue = do
     when (isNothing v) $ requestAnimationFrame do
       machine ← Ref.read ref
       Ref.read val >>= traverse_ \v' → do
-        res ← EFn.runEffectFn1 (V.step machine) (render v')
+        res ← EFn.runEffectFn2 V.step machine (render v')
         Ref.write res ref
         Ref.write Nothing val
 
@@ -179,7 +190,7 @@ mkRenderQueue' spec parent render initialValue = do
   ref ← Ref.new initMachine
   pure \v → do
     machine ← Ref.read ref
-    res ← EFn.runEffectFn1 (V.step machine) (render v)
+    res ← EFn.runEffectFn2 V.step machine (render v)
     Ref.write res ref
 
 main ∷ Effect Unit
