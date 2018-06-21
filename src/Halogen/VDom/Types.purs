@@ -5,7 +5,6 @@ module Halogen.VDom.Types
   , graft
   , unGraft
   , runGraft
-  , ElemSpec(..)
   , ElemName(..)
   , Namespace(..)
   ) where
@@ -78,12 +77,6 @@ runGraft =
       go (Grafted g) = Grafted (bimap fa fw g)
     in
       go v
-
-data ElemSpec a = ElemSpec
-
-derive instance eqElemSpec ∷ Eq a ⇒ Eq (ElemSpec a)
-derive instance ordElemSpec ∷ Ord a ⇒ Ord (ElemSpec a)
-derive instance functorElemSpec ∷ Functor ElemSpec
 
 newtype ElemName = ElemName String
 
