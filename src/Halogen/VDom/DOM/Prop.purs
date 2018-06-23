@@ -103,8 +103,7 @@ buildProp emit el = renderProp
     case Object.lookup "ref" state.props of
       Just (Ref f) →
         EFn.runEffectFn1 mbEmit (f (Removed el))
-      _ →
-        Util.effectUnit
+      _ → pure unit
 
   mbEmit = EFn.mkEffectFn1 case _ of
     Just a → emit a

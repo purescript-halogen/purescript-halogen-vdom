@@ -1,7 +1,5 @@
 module Halogen.VDom.Util
-  ( effectPure
-  , effectUnit
-  , newMutMap
+  ( newMutMap
   , pokeMutMap
   , deleteMutMap
   , unsafeFreeze
@@ -48,12 +46,6 @@ import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
-
-effectPure ∷ ∀ a. a → Effect a
-effectPure = pure
-
-effectUnit ∷ Effect Unit
-effectUnit = pure unit
 
 newMutMap ∷ ∀ r a. Effect (STObject r a)
 newMutMap = unsafeCoerce STObject.new

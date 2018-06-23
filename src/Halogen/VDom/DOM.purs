@@ -76,19 +76,17 @@ buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
 
 patchText ∷ ∀ a w. EFn.EffectFn2 (TextState a w) (VDom a w) (VDomStep a w)
 patchText = EFn.mkEffectFn2 \state vdom → do
-  let { build, node, value } = state
+  let { build, node, value: value1 } = state
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchText state (runGraft g)
-    Text s → do
-      let
-        nextState = { build, node, value: s }
-        res = mkStep $ Step node nextState patchText haltText
-      if value == s
-        then pure res
-        else do
-          EFn.runEffectFn2 Util.setTextContent s node
-          pure res
+    Text value2
+      | value1 == value2 →
+          pure $ mkStep $ Step node state patchText haltText
+      | otherwise → do
+          let nextState = { build, node, value: value2 }
+          EFn.runEffectFn2 Util.setTextContent value2 node
+          pure $ mkStep $ Step node nextState patchText haltText
     _ → do
       EFn.runEffectFn1 haltText state
       EFn.runEffectFn1 build vdom
@@ -138,12 +136,12 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
     Elem ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 → do
       case Array.length ch1, Array.length ch2 of
         0, 0 → do
-          attrs' ← EFn.runEffectFn2 step attrs as2
+          attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
               { build
               , node
-              , attrs: attrs'
+              , attrs: attrs2
               , ns: ns2
               , name: name2
               , children: ch1
@@ -160,16 +158,16 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
               res ← EFn.runEffectFn1 build v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-          children' ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
-          attrs' ← EFn.runEffectFn2 step attrs as2
+          children2 ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
+          attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
               { build
               , node
-              , attrs: attrs'
+              , attrs: attrs2
               , ns: ns2
               , name: name2
-              , children: children'
+              , children: children2
               }
           pure $ mkStep $ Step node nextState patchElem haltElem
     _ → do
@@ -218,19 +216,19 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
 
 patchKeyed ∷ ∀ a w. EFn.EffectFn2 (KeyedState a w) (VDom a w) (VDomStep a w)
 patchKeyed = EFn.mkEffectFn2 \state vdom → do
-  let{ build, node, attrs, ns: ns1, name: name1, children: ch1, length: len1 } = state
+  let { build, node, attrs, ns: ns1, name: name1, children: ch1, length: len1 } = state
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchKeyed state (runGraft g)
     Keyed ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 →
       case len1, Array.length ch2 of
         0, 0 → do
-          attrs' ← EFn.runEffectFn2 Machine.step attrs as2
+          attrs2 ← EFn.runEffectFn2 Machine.step attrs as2
           let
             nextState =
               { build
               , node
-              , attrs: attrs'
+              , attrs: attrs2
               , ns: ns2
               , name: name2
               , children: ch1
@@ -248,16 +246,16 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
               res ← EFn.runEffectFn1 build v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-          children' ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
-          attrs' ← EFn.runEffectFn2 step attrs as2
+          children2 ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+          attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
               { build
               , node
-              , attrs: attrs'
+              , attrs: attrs2
               , ns: ns2
               , name: name2
-              , children: children'
+              , children: children2
               , length: len2
               }
           pure $ mkStep $ Step node nextState patchKeyed haltKeyed
