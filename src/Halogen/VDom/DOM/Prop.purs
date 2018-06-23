@@ -21,6 +21,7 @@ import Effect.Uncurried as EFn
 import Foreign (typeOf)
 import Foreign.Object as Object
 import Halogen.VDom as V
+import Halogen.VDom.Machine (Step'(..), mkStep)
 import Halogen.VDom.Types (Namespace(..))
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
@@ -71,35 +72,38 @@ buildProp
   . (a → Effect Unit)
   → DOM.Element
   → V.Machine (Array (Prop a)) Unit
-buildProp emit el = render
+buildProp emit el = renderProp
   where
-  render = EFn.mkEffectFn1 \ps1 → do
+  renderProp = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
     ps1' ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp events)
-    pure
-      (V.Step unit
-        (Fn.runFn2 patch (Util.unsafeFreeze events) ps1')
-        (done ps1'))
+    let
+      state =
+        { events: Util.unsafeFreeze events
+        , props: ps1'
+        }
+    pure $ mkStep $ Step unit state patchProp haltProp
 
-  patch = Fn.mkFn2 \prevEvents ps1 →
-    EFn.mkEffectFn1 \ps2 → do
-      events ← Util.newMutMap
-      let
-        onThese = Fn.runFn2 diffProp prevEvents events
-        onThis = removeProp prevEvents
-        onThat = applyProp events
-      ps2' ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
-      pure
-        (V.Step unit
-          (Fn.runFn2 patch (Util.unsafeFreeze events) ps2')
-          (done ps2'))
+  patchProp = EFn.mkEffectFn2 \state ps2 → do
+    events ← Util.newMutMap
+    let
+      { events: prevEvents, props: ps1 } = state
+      onThese = Fn.runFn2 diffProp prevEvents events
+      onThis = removeProp prevEvents
+      onThat = applyProp events
+    props ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat
+    let
+      nextState =
+        { events: Util.unsafeFreeze events
+        , props
+        }
+    pure $ mkStep $ Step unit nextState patchProp haltProp
 
-  done ps =
-    case Object.lookup "ref" ps of
+  haltProp = EFn.mkEffectFn1 \state → do
+    case Object.lookup "ref" state.props of
       Just (Ref f) →
         EFn.runEffectFn1 mbEmit (f (Removed el))
-      _ →
-        Util.effectUnit
+      _ → pure unit
 
   mbEmit = EFn.mkEffectFn1 case _ of
     Just a → emit a

@@ -17,11 +17,17 @@ exports.unsafeDeleteAny = function (key, obj) {
 };
 
 exports.forE = function (a, f) {
-    var b = [];
-    for (var i = 0; i < a.length; i++) {
-      b.push(f(i, a[i]));
-    }
-    return b;
+  var b = [];
+  for (var i = 0; i < a.length; i++) {
+    b.push(f(i, a[i]));
+  }
+  return b;
+};
+
+exports.forEachE = function (a, f) {
+  for (var i = 0; i < a.length; i++) {
+    f(a[i]);
+  }
 };
 
 exports.forInE = function (o, f) {

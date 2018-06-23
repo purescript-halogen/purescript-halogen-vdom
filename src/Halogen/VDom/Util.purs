@@ -1,7 +1,5 @@
 module Halogen.VDom.Util
-  ( effectPure
-  , effectUnit
-  , newMutMap
+  ( newMutMap
   , pokeMutMap
   , deleteMutMap
   , unsafeFreeze
@@ -11,6 +9,7 @@ module Halogen.VDom.Util
   , unsafeSetAny
   , unsafeDeleteAny
   , forE
+  , forEachE
   , forInE
   , replicateE
   , diffWithIxE
@@ -48,12 +47,6 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
 
-effectPure ∷ ∀ a. a → Effect a
-effectPure = pure
-
-effectUnit ∷ Effect Unit
-effectUnit = pure unit
-
 newMutMap ∷ ∀ r a. Effect (STObject r a)
 newMutMap = unsafeCoerce STObject.new
 
@@ -86,6 +79,13 @@ foreign import forE
       (Array a)
       (EFn.EffectFn2 Int a b)
       (Array b)
+
+foreign import forEachE
+  ∷ ∀ a
+  . EFn.EffectFn2
+      (Array a)
+      (EFn.EffectFn1 a Unit)
+      Unit
 
 foreign import forInE
   ∷ ∀ a

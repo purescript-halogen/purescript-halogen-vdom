@@ -5,7 +5,6 @@ module Halogen.VDom.Types
   , graft
   , unGraft
   , runGraft
-  , ElemSpec(..)
   , ElemName(..)
   , Namespace(..)
   ) where
@@ -25,8 +24,8 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | fusion using a Coyoneda-like encoding.
 data VDom a w
   = Text String
-  | Elem (ElemSpec a) (Array (VDom a w))
-  | Keyed (ElemSpec a) (Array (Tuple String (VDom a w)))
+  | Elem (Maybe Namespace) ElemName a (Array (VDom a w))
+  | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
 
@@ -72,18 +71,12 @@ runGraft =
   unGraft \(Graft fa fw v) →
     let
       go (Text s) = Text s
-      go (Elem spec ch) = Elem (map fa spec) (map go ch)
-      go (Keyed spec ch) = Keyed (map fa spec) (map (map go) ch)
+      go (Elem ns n a ch) = Elem ns n (fa a) (map go ch)
+      go (Keyed ns n a ch) = Keyed ns n (fa a) (map (map go) ch)
       go (Widget w) = Widget (fw w)
       go (Grafted g) = Grafted (bimap fa fw g)
     in
       go v
-
-data ElemSpec a = ElemSpec (Maybe Namespace) ElemName a
-
-derive instance eqElemSpec ∷ Eq a ⇒ Eq (ElemSpec a)
-derive instance ordElemSpec ∷ Ord a ⇒ Ord (ElemSpec a)
-derive instance functorElemSpec ∷ Functor ElemSpec
 
 newtype ElemName = ElemName String
 
