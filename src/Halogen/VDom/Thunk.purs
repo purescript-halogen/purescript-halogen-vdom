@@ -94,10 +94,12 @@ buildThunk
   → V.Machine (Thunk f i) Node
 buildThunk toVDom = renderThunk
   where
+  renderThunk ∷ V.VDomSpec a w → V.Machine (Thunk f i) Node
   renderThunk spec = EFn.mkEffectFn1 \t → do
     vdom ← EFn.runEffectFn1 (V.buildVDom spec) (toVDom (runThunk t))
     pure $ M.mkStep $ M.Step (M.extract vdom) { thunk: t, vdom } patchThunk haltThunk
 
+  patchThunk ∷ EFn.EffectFn2 (ThunkState f i a w) (Thunk f i) (V.Step (Thunk f i) Node)
   patchThunk = EFn.mkEffectFn2 \state t2 → do
     let { vdom: prev, thunk: t1 } = state
     if Fn.runFn2 unsafeEqThunk t1 t2
@@ -106,5 +108,6 @@ buildThunk toVDom = renderThunk
         vdom ← EFn.runEffectFn2 M.step prev (toVDom (runThunk t2))
         pure $ M.mkStep $ M.Step (M.extract vdom) { vdom, thunk: t2 } patchThunk haltThunk
 
+  haltThunk ∷ EFn.EffectFn1 (ThunkState f i a w) Unit
   haltThunk = EFn.mkEffectFn1 \state → do
     EFn.runEffectFn1 M.halt state.vdom
