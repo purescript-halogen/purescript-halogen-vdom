@@ -7,6 +7,13 @@
 // addEventListener
 // setAttribute
 
+exports.cancelBehavior = function (ty) {
+  return function () {
+    var canceler = window.__CANCELER[ty];
+    canceler();
+  }
+}
+
 exports.unsafeGetAny = function (key, obj) {
   return obj[key];
 };
@@ -197,7 +204,9 @@ exports.insertChildIx = function (type, i, a, b) {
   return function () {
     var n = (b.children[i]) || {__ref: {__id: "-1"}};
 
-    if (n.__ref.__id !== a.__ref.__id) {
+    if (!a)
+      console.warn("CUSTOM VDOM ERROR !! : ", "Trying to add undefined element to ", b);
+    if (a && n.__ref.__id !== a.__ref.__id) {
       if (type == "patch") {
         window.addChild(a, b, i);
       }

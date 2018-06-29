@@ -36,6 +36,7 @@ module Halogen.VDom.Util
   , removeProperty
   , JsUndefined
   , jsUndefined
+  , cancelBehavior
   ) where
 
 import Prelude
@@ -206,3 +207,5 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
+
+foreign import cancelBehavior :: forall eff. String -> Eff eff Unit

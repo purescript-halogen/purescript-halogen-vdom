@@ -36,7 +36,7 @@ data Prop a
   | Property String PropValue
   | Handler DOM.EventType (DOM.Event → Maybe a)
   | Ref (ElemRef DOM.Element → Maybe a)
-  | BHandler String (String → a)
+  | BHandler String (Unit -> Maybe a)
 
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
@@ -132,9 +132,9 @@ buildProp emit el = render
       Ref f → do
         mbEmit (f (Created el))
         pure v
-      BHandler f _ → do
-        Fn.runFn3 setProperty "custom" (propFromString f) el
-        pure v
+      BHandler ty behavior → do
+         mbEmit (behavior unit)
+         pure v
 
   diffProp = Fn.mkFn2 \prevEvents events → Fn.mkFn4 \_ _ v1 v2 →
     case v1, v2 of
@@ -179,7 +179,9 @@ buildProp emit el = render
         let
           handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
         Fn.runFn3 Util.removeEventListener ty (fst handler) el
-      BHandler _ _ → Util.effUnit
+      BHandler ty _ → do
+         _ <- Util.cancelBehavior ty
+         Util.effUnit
       Ref _ →
         Util.effUnit
 
@@ -190,7 +192,7 @@ propToStrKey = case _ of
   Property prop _ → "prop/" <> prop
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
-  BHandler _ _ -> "bhandler"
+  BHandler ty _ -> "bhandler/" <> ty
 
 setProperty ∷ ∀ eff. Fn.Fn3 String PropValue DOM.Element (Eff (dom ∷ DOM | eff) Unit)
 setProperty = Util.unsafeSetProp
