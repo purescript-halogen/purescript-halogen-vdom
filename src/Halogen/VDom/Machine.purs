@@ -1,55 +1,45 @@
 module Halogen.VDom.Machine
   ( Machine
-  , Step(..)
+  , Step'(..)
+  , Step
+  , mkStep
+  , unStep
   , extract
   , step
   , halt
-  , fold
-  , loop
-  , stepper
-  , constantly
-  , never
   ) where
 
 import Prelude
-import Data.Tuple (Tuple(..))
 
-type Machine m a b = a → m (Step m a b)
+import Effect.Uncurried (EffectFn1, EffectFn2, mkEffectFn1, mkEffectFn2, runEffectFn1, runEffectFn2)
+import Unsafe.Coerce (unsafeCoerce)
 
-data Step m a b = Step b (Machine m a b) (m Unit)
+type Machine a b = EffectFn1 a (Step a b)
 
-instance functorStep ∷ Functor m ⇒ Functor (Step m a) where
-  map f (Step x m d) = Step (f x) (m >>> map (map f)) d
+data Step' a b s = Step b s (EffectFn2 s a (Step a b)) (EffectFn1 s Unit)
+
+foreign import data Step ∷ Type → Type → Type
+
+mkStep ∷ ∀ a b s. Step' a b s → Step a b
+mkStep = unsafeCoerce
+
+unStep :: ∀ a b r. (∀ s. Step' a b s → r) → Step a b → r
+unStep = unsafeCoerce
 
 -- | Returns the output value of a `Step`.
-extract ∷ ∀ m a b. Step m a b → b
-extract (Step x _ _) = x
+extract ∷ ∀ a b. Step a b → b
+extract = unStep \(Step x _ _ _) → x
 
 -- | Runs the next step.
-step ∷ ∀ m a b. Step m a b → a → m (Step m a b)
-step (Step _ m _) = m
+step ∷ ∀ a b. EffectFn2 (Step a b) a (Step a b)
+step = coerce $ mkEffectFn2 \(Step _ s k _) a → runEffectFn2 k s a
+  where
+  coerce ∷ ∀ s. EffectFn2 (Step' a b s) a (Step a b) → EffectFn2 (Step a b) a (Step a b)
+  coerce = unsafeCoerce
 
 -- | Runs the finalizer associated with a `Step`
-halt ∷ ∀ m a b. Step m a b → m Unit
-halt (Step _ _ h) = h
-
-fold ∷ ∀ m a b s. Applicative m ⇒ (s → a → m (Tuple s b)) → (s → m Unit) → s → Machine m a b
-fold f g s a = next <$> f s a
+halt ∷ ∀ a b. EffectFn1 (Step a b) Unit
+halt = coerce $ mkEffectFn1 \(Step _ s _ k) → runEffectFn1 k s
   where
-  next (Tuple s' b) = Step b (fold f g s') (g s')
-
-loop ∷ ∀ m a s. Applicative m ⇒ (s → a → m s) → (s → m Unit) → s → Machine m a Unit
-loop f g s a = next <$> f s a
-  where
-  next s' = Step unit (loop f g s') (g s')
-
-stepper ∷ ∀ m a b. Functor m ⇒ (a → m b) → m Unit → Machine m a b
-stepper f h a = next <$> f a
-  where
-  next b = Step b (stepper f h) h
-
-constantly ∷ ∀ m a b. Applicative m ⇒ b → Machine m a b
-constantly x _ = pure (Step x (constantly x) (pure unit))
-
-never ∷ ∀ m b. Applicative m ⇒ Machine m Void b
-never a = pure (Step (absurd a) never (pure unit))
+  coerce ∷ ∀ s. EffectFn1 (Step' a b s) Unit → EffectFn1 (Step a b) Unit
+  coerce = unsafeCoerce

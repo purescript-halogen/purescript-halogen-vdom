@@ -4,6 +4,6 @@ module Halogen.VDom
   , module Types
   ) where
 
-import Halogen.VDom.DOM (VDomMachine, VDomStep, VDomSpec(..), buildVDom) as DOM
-import Halogen.VDom.Machine (Machine, Step(..), extract, step, halt) as Machine
-import Halogen.VDom.Types (VDom(..), Graft, runGraft, ElemSpec(..), ElemName(..), Namespace(..)) as Types
+import Halogen.VDom.DOM (VDomSpec(..), buildVDom) as DOM
+import Halogen.VDom.Machine (Machine, Step, Step'(..), mkStep, unStep, extract, step, halt) as Machine
+import Halogen.VDom.Types (VDom(..), Graft, runGraft, ElemName(..), Namespace(..)) as Types

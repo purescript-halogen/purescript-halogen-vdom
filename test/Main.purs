@@ -1,36 +1,40 @@
 module Test.Main where
 
 import Prelude
-import Control.Monad.Eff (Eff, kind Effect)
-import Control.Monad.Eff.Ref (REF)
-import Control.Monad.Eff.Ref as Ref
-import Control.Monad.Eff.Timer as Timer
-import Data.Exists (Exists, mkExists, runExists)
-import Data.Maybe (Maybe(..), isNothing)
-import Data.Newtype (wrap)
+
+import Data.Bifunctor (bimap)
 import Data.Foldable (for_, traverse_)
 import Data.Function.Uncurried as Fn
-import Data.Tuple (Tuple)
-import DOM (DOM)
-import DOM.HTML (window) as DOM
-import DOM.HTML.Types (htmlDocumentToDocument, htmlDocumentToParentNode) as DOM
-import DOM.HTML.Window (document) as DOM
-import DOM.Node.Types (Document, Node, elementToNode) as DOM
-import DOM.Node.Node (appendChild) as DOM
-import DOM.Node.ParentNode (querySelector) as DOM
+import Data.Maybe (Maybe(..), isNothing)
+import Data.Newtype (class Newtype, un, wrap)
+import Data.Tuple (Tuple(..))
+import Effect (Effect)
+import Effect.Ref as Ref
+import Effect.Timer as Timer
+import Effect.Uncurried as EFn
 import Halogen.VDom as V
-import Halogen.VDom.Util (refEq)
 import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp)
+import Halogen.VDom.Thunk (Thunk, thunk1, buildThunk)
 import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM.Document (Document) as DOM
+import Web.DOM.Element (toNode) as DOM
+import Web.DOM.Node (Node, appendChild) as DOM
+import Web.DOM.ParentNode (querySelector) as DOM
+import Web.HTML (window) as DOM
+import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
+import Web.HTML.Window (document) as DOM
 
 infixr 1 prop as :=
 
 prop ∷ ∀ a. String → String → Prop a
 prop key val = Property key (propFromString val)
 
-type VDom = V.VDom (Array (Prop Void)) (Exists Thunk)
+newtype VDom a = VDom (V.VDom (Array (Prop a)) (Thunk VDom a))
 
-data Thunk b = Thunk b (b → VDom)
+instance functorHtml ∷ Functor VDom where
+  map f (VDom vdom) = VDom (bimap (map (map f)) (map f) vdom)
+
+derive instance newtypeVDom ∷ Newtype (VDom a) _
 
 type State = Array Database
 
@@ -54,27 +58,27 @@ type DBQuery =
 initialState ∷ State
 initialState = []
 
-elem ∷ ∀ a w. String → a → Array (V.VDom a w) → V.VDom a w
-elem n a = V.Elem (V.ElemSpec Nothing (V.ElemName n) a)
+elem ∷ ∀ a. String → Array (Prop a) → Array (VDom a) → VDom a
+elem n a c = VDom $ V.Elem Nothing (V.ElemName n) a (unsafeCoerce c)
 
-keyed ∷ ∀ a w. String → a → Array (Tuple String (V.VDom a w)) → V.VDom a w
-keyed n a = V.Keyed (V.ElemSpec Nothing (V.ElemName n) a)
+keyed ∷ ∀ a. String → Array (Prop a) → Array (Tuple String (VDom a)) → VDom a
+keyed n a c = VDom $ V.Keyed Nothing (V.ElemName n) a (unsafeCoerce c)
 
-text ∷ ∀ a w. String → V.VDom a w
-text = V.Text
+text ∷ ∀ a. String → VDom a
+text a = VDom $ V.Text a
 
-thunk ∷ ∀ a. (a → VDom) → a → VDom
-thunk render val = V.Widget (mkExists (Thunk val render))
+thunk ∷ ∀ a b. (a → VDom b) → a → VDom b
+thunk render val = VDom $ V.Widget $ Fn.runFn2 thunk1 render val
 
-renderData ∷ State → VDom
+renderData ∷ State → VDom Void
 renderData st =
   elem "div" []
     [ elem "table"
         [ "className" := "table table-striped latest data" ]
-        -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (thunk renderDatabase db)) st) ]
+        [ keyed "tbody" [] (map (\db → Tuple db.dbname (thunk renderDatabase db)) st) ]
         -- [ keyed "tbody" [] (map (\db → Tuple db.dbname (renderDatabase db)) st) ]
         -- [ elem "tbody" [] (map (thunk renderDatabase) st) ]
-        [ elem "tbody" [] (map renderDatabase st) ]
+        -- [ elem "tbody" [] (map renderDatabase st) ]
     ]
 
   where
@@ -107,89 +111,69 @@ renderData st =
           ]
       ]
 
-buildWidget
-  ∷ ∀ eff
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
-  → V.VDomMachine (dom ∷ DOM, ref ∷ REF | eff) (Exists Thunk) DOM.Node
-buildWidget spec = render
-  where
-  render = runExists \(Thunk a render') → do
-    V.Step node m h ← V.buildVDom spec (render' a)
-    pure (V.Step node (Fn.runFn4 patch (unsafeCoerce a) node m h) h)
-
-  patch = Fn.mkFn4 \a node step halt → runExists \(Thunk b render') →
-    if Fn.runFn2 refEq a b
-      then pure (V.Step node (Fn.runFn4 patch a node step halt) halt)
-      else do
-        V.Step node' m h ← step (render' b)
-        pure (V.Step node' (Fn.runFn4 patch (unsafeCoerce b) node' m h) h)
-
 mkSpec
-  ∷ ∀ eff
-  . DOM.Document
-  → V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  ∷ DOM.Document
+  → V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
 mkSpec document = V.VDomSpec
-  { buildWidget
+  { buildWidget: buildThunk (un VDom)
   , buildAttributes: buildProp (const (pure unit))
   , document
   }
 
-foreign import data DBMON ∷ Effect
+foreign import getData ∷ Effect State
 
-foreign import getData ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) State
+foreign import getTimeout ∷ Effect Int
 
-foreign import getTimeout ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) Int
+foreign import pingRenderRate ∷ Effect Unit
 
-foreign import pingRenderRate ∷ ∀ eff. Eff (dbmon ∷ DBMON | eff) Unit
-
-foreign import requestAnimationFrame ∷ ∀ eff. Eff (dom ∷ DOM | eff) Unit → Eff (dom ∷ DOM | eff) Unit
+foreign import requestAnimationFrame ∷ Effect Unit → Effect Unit
 
 mkRenderQueue
-  ∷ ∀ eff a
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  ∷ ∀ a
+  . V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
   → DOM.Node
-  → (a → VDom)
+  → (a → VDom Void)
   → a
-  → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
+  → Effect (a → Effect Unit)
 mkRenderQueue spec parent render initialValue = do
-  initMachine ← V.buildVDom spec (render initialValue)
+  initMachine ← EFn.runEffectFn1 (V.buildVDom spec) (un VDom (render initialValue))
   _ ← DOM.appendChild (V.extract initMachine) parent
-  ref ← Ref.newRef initMachine
-  val ← Ref.newRef Nothing
+  ref ← Ref.new initMachine
+  val ← Ref.new Nothing
   pure \a → do
-    v ← Ref.readRef val
-    Ref.writeRef val (Just a)
+    v ← Ref.read val
+    Ref.write (Just a) val
     when (isNothing v) $ requestAnimationFrame do
-      machine ← Ref.readRef ref
-      Ref.readRef val >>= traverse_ \v' → do
-        res ← V.step machine (render v')
-        Ref.writeRef ref res
-        Ref.writeRef val Nothing
+      machine ← Ref.read ref
+      Ref.read val >>= traverse_ \v' → do
+        res ← EFn.runEffectFn2 V.step machine (un VDom (render v'))
+        Ref.write res ref
+        Ref.write Nothing val
 
 mkRenderQueue'
-  ∷ ∀ eff a
-  . V.VDomSpec (dom ∷ DOM, ref ∷ REF | eff) (Array (Prop Void)) (Exists Thunk)
+  ∷ ∀ a
+  . V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
   → DOM.Node
-  → (a → VDom)
+  → (a → VDom Void)
   → a
-  → Eff (dom ∷ DOM, ref ∷ REF | eff) (a → Eff (dom ∷ DOM, ref ∷ REF | eff) Unit)
+  → Effect (a → Effect Unit)
 mkRenderQueue' spec parent render initialValue = do
-  initMachine ← V.buildVDom spec (render initialValue)
+  initMachine ← EFn.runEffectFn1 (V.buildVDom spec) (un VDom (render initialValue))
   _ ← DOM.appendChild (V.extract initMachine) parent
-  ref ← Ref.newRef initMachine
+  ref ← Ref.new initMachine
   pure \v → do
-    machine ← Ref.readRef ref
-    res ← V.step machine (render v)
-    Ref.writeRef ref res
+    machine ← Ref.read ref
+    res ← EFn.runEffectFn2 V.step machine (un VDom (render v))
+    Ref.write res ref
 
-main :: ∀ eff. Eff (ref ∷ REF, dom ∷ DOM, dbmon ∷ DBMON, timer ∷ Timer.TIMER | eff) Unit
+main ∷ Effect Unit
 main = do
   win ← DOM.window
   doc ← DOM.document win
-  bod ← DOM.querySelector (wrap "body") (DOM.htmlDocumentToParentNode doc)
+  bod ← DOM.querySelector (wrap "body") (DOM.toParentNode doc)
   for_ bod \body → do
-    let spec = mkSpec (DOM.htmlDocumentToDocument doc)
-    pushQueue ← mkRenderQueue' spec (DOM.elementToNode body) renderData initialState
+    let spec = mkSpec (DOM.toDocument doc)
+    pushQueue ← mkRenderQueue' spec (DOM.toNode body) renderData initialState
     let
       loop = do
         newData ← getData
