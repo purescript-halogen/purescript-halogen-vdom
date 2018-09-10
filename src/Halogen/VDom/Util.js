@@ -138,9 +138,9 @@ exports.diffPropWithKeyAndIxE = function (o1, as, fk, f1, f2, f3, el) {
     var a = as[i];
     var k = fk(a);
     if (o1.hasOwnProperty(k)) {
-      o2[k] = f1(k, i, o1[k], a)();
+      o2[k] = f1(k, i, o1[k], a);
     } else {
-      o2[k] = f3(k, i, a)();
+      o2[k] = f3(k, i, a);
     }
   }
   for (var k in o1) {
@@ -148,7 +148,7 @@ exports.diffPropWithKeyAndIxE = function (o1, as, fk, f1, f2, f3, el) {
       continue;
     }
     replace = true;
-    f2(k, o1[k])();
+    f2(k, o1[k]);
   }
   if (replace)
     window.replaceView(el);
