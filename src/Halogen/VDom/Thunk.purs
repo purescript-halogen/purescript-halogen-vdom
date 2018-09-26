@@ -7,6 +7,7 @@ module Halogen.VDom.Thunk
   , thunk1
   , thunk2
   , thunk3
+  , unsafeEqThunk
   ) where
 
 import Prelude
