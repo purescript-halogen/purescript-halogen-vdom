@@ -1,5 +1,5 @@
 module Halogen.VDom.Thunk
-  ( Thunk
+  ( Thunk(..)
   , buildThunk
   , runThunk
   , hoist
