@@ -1,5 +1,7 @@
 module Halogen.VDom.Thunk
-  ( Thunk
+  ( Thunk(..)
+  , ThunkArg
+  , ThunkId
   , buildThunk
   , runThunk
   , hoist
@@ -7,6 +9,8 @@ module Halogen.VDom.Thunk
   , thunk1
   , thunk2
   , thunk3
+  , unsafeEqThunk
+  , unsafeThunkId
   ) where
 
 import Prelude
