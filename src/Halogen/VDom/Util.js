@@ -176,14 +176,27 @@ exports.insertChildIx = function (type, i, a, b) {
 
   if (!a)
     console.warn("CUSTOM VDOM ERROR !! : ", "Trying to add undefined element to ", b);
-  if (a && n.__ref.__id !== a.__ref.__id) {
-    if (type == "patch") {
-      window.addChild(a, b, i);
-    }
 
+  if (n === a) {
+    return;
+  }
+
+  if (type !== "patch") {
     a.parentNode = b;
     b.children.splice(i, 0, a);
+
+    return;
   }
+
+  var index = b.children.indexOf(a);
+  if (index !== -1) {
+    b.children.splice(index, 1);
+    window.moveChild(a, b, i);
+  } else {
+    window.addChild(a, b, i);
+  }
+  b.children.splice(i, 0, a);
+  a.parentNode = b;
 };
 
 exports.removeChild = function (a, b) {
