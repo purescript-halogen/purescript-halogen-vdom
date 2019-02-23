@@ -25,7 +25,7 @@
     "purescript-prelude": "^4.0.0",
     "purescript-effect": "^2.0.0",
     "purescript-tuples": "^5.0.0",
-    "purescript-web-html": "^1.0.0",
+    "purescript-web-html": "^2.0.0",
     "purescript-foreign-object": "^1.0.0",
     "purescript-maybe": "^4.0.0",
     "purescript-unsafe-coerce": "^4.0.0",
