@@ -3,6 +3,7 @@ module Halogen.VDom.Thunk
   , buildThunk
   , runThunk
   , hoist
+  , mapThunk
   , thunked
   , thunk1
   , thunk2
@@ -32,7 +33,10 @@ instance functorThunk ∷ Functor f ⇒ Functor (Thunk f) where
   map f (Thunk a b c d) = Thunk a b (c >>> map f) d
 
 hoist ∷ ∀ f g. (f ~> g) → Thunk f ~> Thunk g
-hoist k (Thunk a b c d) = Thunk a b (c >>> k) d
+hoist = mapThunk
+
+mapThunk ∷ ∀ f g i j. (f i -> g j) → Thunk f i -> Thunk g j
+mapThunk k (Thunk a b c d) = Thunk a b (c >>> k) d
 
 thunk ∷ ∀ a f i. Fn.Fn4 ThunkId (Fn.Fn2 a a Boolean) (a → f i) a (Thunk f i)
 thunk = Fn.mkFn4 \tid eqFn f a →
