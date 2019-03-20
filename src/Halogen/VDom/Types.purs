@@ -40,6 +40,10 @@ instance bifunctorVDom ∷ Bifunctor VDom where
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
 
+-- | Replaces "widgets" in the `VDom` with the ability to turn them into other
+-- | `VDom` nodes.
+-- |
+-- | Using this function will fuse any `Graft`s present in the `VDom`.
 renderWidget ∷ ∀ a w x. (w → VDom a x) → VDom a w → VDom a x
 renderWidget f = case _ of
   Text a → Text a
