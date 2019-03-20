@@ -1,5 +1,6 @@
 module Halogen.VDom.Types
   ( VDom(..)
+  , renderWidget
   , Graft
   , GraftX(..)
   , graft
@@ -38,6 +39,15 @@ instance bifunctorVDom ∷ Bifunctor VDom where
   bimap f g (Text a) = Text a
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
+
+renderWidget ∷ ∀ a w x. (w → VDom a x) → VDom a w → VDom a x
+renderWidget f = case _ of
+  Text a → Text a
+  Elem ns n a ch → Elem ns n a (map (renderWidget f) ch)
+  Keyed ns n a ch → Keyed ns n a (map (map (renderWidget f)) ch)
+  Widget w → f w
+  Grafted g → Grafted $ unGraft (\(Graft fa fw v) →
+    graft (Graft identity identity (renderWidget f (bimap fa fw v)))) g
 
 foreign import data Graft ∷ Type → Type → Type
 
