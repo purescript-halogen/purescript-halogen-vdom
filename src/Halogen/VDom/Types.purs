@@ -44,14 +44,13 @@ instance bifunctorVDom ∷ Bifunctor VDom where
 -- | `VDom` nodes.
 -- |
 -- | Using this function will fuse any `Graft`s present in the `VDom`.
-renderWidget ∷ ∀ a w x. (w → VDom a x) → VDom a w → VDom a x
-renderWidget f = case _ of
+renderWidget ∷ ∀ a b w x. (a → b) → (w → VDom b x) → VDom a w → VDom b x
+renderWidget f g = case _ of
   Text a → Text a
-  Elem ns n a ch → Elem ns n a (map (renderWidget f) ch)
-  Keyed ns n a ch → Keyed ns n a (map (map (renderWidget f)) ch)
-  Widget w → f w
-  Grafted g → Grafted $ unGraft (\(Graft fa fw v) →
-    graft (Graft identity identity (renderWidget f (bimap fa fw v)))) g
+  Elem ns n a ch → Elem ns n (f a) (map (renderWidget f g) ch)
+  Keyed ns n a ch → Keyed ns n (f a) (map (map (renderWidget f g)) ch)
+  Widget w → g w
+  Grafted gaw → renderWidget f g (runGraft gaw)
 
 foreign import data Graft ∷ Type → Type → Type
 
