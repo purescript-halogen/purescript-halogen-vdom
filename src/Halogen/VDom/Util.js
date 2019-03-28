@@ -243,7 +243,13 @@ exports.removeAttribute = function (ns, attr, el) {
 };
 
 exports.addEventListener = function (pr, ev, listener, el) {
-  // el.addEventListener(ev, listener, false);
+  try{
+    if( (typeof window.manualEventsName != "undefined") && (Array.isArray(window.manualEventsName)) && (typeof window.setManualEvents == "function") && (window.manualEventsName.indexOf(ev) != -1)){
+      window.setManualEvents(ev,listener);
+    }
+  } catch(err){
+    console.error("Error while checking for manualEvents ");
+  }
   el.props[ev] = listener;
   if(pr == "patch") {
     window.replaceView(el);
