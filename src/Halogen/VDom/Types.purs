@@ -1,5 +1,6 @@
 module Halogen.VDom.Types
   ( VDom(..)
+  , renderWidget
   , Graft
   , GraftX(..)
   , graft
@@ -38,6 +39,18 @@ instance bifunctorVDom ∷ Bifunctor VDom where
   bimap f g (Text a) = Text a
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
+
+-- | Replaces "widgets" in the `VDom` with the ability to turn them into other
+-- | `VDom` nodes.
+-- |
+-- | Using this function will fuse any `Graft`s present in the `VDom`.
+renderWidget ∷ ∀ a b w x. (a → b) → (w → VDom b x) → VDom a w → VDom b x
+renderWidget f g = case _ of
+  Text a → Text a
+  Elem ns n a ch → Elem ns n (f a) (map (renderWidget f g) ch)
+  Keyed ns n a ch → Keyed ns n (f a) (map (map (renderWidget f g)) ch)
+  Widget w → g w
+  Grafted gaw → renderWidget f g (runGraft gaw)
 
 foreign import data Graft ∷ Type → Type → Type
 
