@@ -97,7 +97,7 @@ buildElem = render
     let
       node = DOMElement.toNode el
       onChild = EFn.mkEffectFn2 \ix child → do
-        res@Step n m h ← EFn.runEffectFn1 build child
+        res@(Step n m h) ← EFn.runEffectFn1 build child
         EFn.runEffectFn3 Util.insertChildIx ix n node
         pure res
     steps ← EFn.runEffectFn2 Util.forE ch1 onChild
