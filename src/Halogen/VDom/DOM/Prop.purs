@@ -13,7 +13,7 @@ import Prelude
 
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
+import Data.Nullable (null, toNullable)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
 import Effect.Ref as Ref
@@ -194,9 +194,11 @@ unsafeGetProperty = Util.unsafeGetAny
 
 removeProperty ∷ EFn.EffectFn2 String DOM.Element Unit
 removeProperty = EFn.mkEffectFn2 \key el →
-  case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
-    "string" → EFn.runEffectFn3 Util.unsafeSetAny key "" el
-    _        → case key of
-      "rowSpan" → EFn.runEffectFn3 Util.unsafeSetAny key 1 el
-      "colSpan" → EFn.runEffectFn3 Util.unsafeSetAny key 1 el
-      _ → EFn.runEffectFn3 Util.unsafeSetAny key Util.jsUndefined el
+  EFn.runEffectFn3 Util.hasAttribute null key el >>= case _ of
+    true -> EFn.runEffectFn3 Util.removeAttribute null key el
+    false -> case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
+      "string" → EFn.runEffectFn3 Util.removeAttribute null key el
+      _        → case key of
+        "rowSpan" → EFn.runEffectFn3 Util.unsafeSetAny key 1 el
+        "colSpan" → EFn.runEffectFn3 Util.unsafeSetAny key 1 el
+        _ → EFn.runEffectFn3 Util.unsafeSetAny key Util.jsUndefined el

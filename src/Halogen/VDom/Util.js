@@ -149,6 +149,14 @@ exports.removeAttribute = function (ns, attr, el) {
   }
 };
 
+exports.hasAttribute = function (ns, attr, el) {
+  if (ns != null) {
+    el.hasAttributeNS(ns, attr);
+  } else {
+    el.hasAttribute(attr);
+  }
+};
+
 exports.addEventListener = function (ev, listener, el) {
   el.addEventListener(ev, listener, false);
 };
