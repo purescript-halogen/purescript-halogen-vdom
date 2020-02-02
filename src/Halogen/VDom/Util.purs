@@ -24,6 +24,7 @@ module Halogen.VDom.Util
   , parentNode
   , setAttribute
   , removeAttribute
+  , hasAttribute
   , addEventListener
   , removeEventListener
   , JsUndefined
@@ -156,6 +157,9 @@ foreign import setAttribute
 
 foreign import removeAttribute
   ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Unit
+
+foreign import hasAttribute
+  ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Boolean
 
 foreign import addEventListener
   ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
