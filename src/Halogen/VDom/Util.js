@@ -151,9 +151,9 @@ exports.removeAttribute = function (ns, attr, el) {
 
 exports.hasAttribute = function (ns, attr, el) {
   if (ns != null) {
-    el.hasAttributeNS(ns, attr);
+    return el.hasAttributeNS(ns, attr);
   } else {
-    el.hasAttribute(attr);
+    return el.hasAttribute(attr);
   }
 };
 
