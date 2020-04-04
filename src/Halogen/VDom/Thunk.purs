@@ -84,7 +84,7 @@ unsafeEqThunk ∷ ∀ f i. Fn.Fn2 (Thunk f i) (Thunk f i) Boolean
 unsafeEqThunk = Fn.mkFn2 \(Thunk a1 b1 _ d1) (Thunk a2 b2 _ d2) →
   Fn.runFn2 Util.refEq a1 a2 &&
   Fn.runFn2 Util.refEq b1 b2 &&
-  Fn.runFn2 a1 d1 d2
+  Fn.runFn2 b1 d1 d2
 
 type ThunkState f i a w =
   { thunk ∷ Thunk f i
