@@ -58,6 +58,12 @@ instance functorElemRef ∷ Functor ElemRef where
 
 foreign import data PropValue ∷ Type
 
+foreign import eqPropValues :: PropValue -> PropValue -> Boolean
+
+instance eqPropValue :: Eq PropValue where
+  eq p1 p2 = eqPropValues p1 p2
+
+
 propFromString ∷ String → PropValue
 propFromString = unsafeCoerce
 
