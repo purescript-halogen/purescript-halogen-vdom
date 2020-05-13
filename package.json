@@ -4,6 +4,7 @@
     "clean": "rimraf output && rimraf",
     "test": "pulp build -I test -- --censor-lib --strict",
     "build": "pulp build -- --censor-lib --strict"
+    "spago:test": "spago bundle-app --main Test.Main --to app.js"
   },
   "devDependencies": {
     "pulp": "^12.3.1",
