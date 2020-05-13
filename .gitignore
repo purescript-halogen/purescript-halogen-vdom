@@ -7,3 +7,5 @@ package-lock.json
 /node_modules/
 /output/
 /app.js
+/hydration-test.js
+/yarn-error.log

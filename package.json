@@ -3,8 +3,9 @@
   "scripts": {
     "clean": "rimraf output && rimraf",
     "test": "pulp build -I test -- --censor-lib --strict",
-    "build": "pulp build -- --censor-lib --strict"
-    "spago:test": "spago bundle-app --main Test.Main --to app.js"
+    "build": "pulp build -- --censor-lib --strict",
+    "spago:test": "spago bundle-app --main Test.Main --to app.js",
+    "spago:hydration-test": "spago bundle-app --main Test.Hydration --to hydration-test.js"
   },
   "devDependencies": {
     "pulp": "^12.3.1",
