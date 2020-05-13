@@ -167,3 +167,23 @@ exports.removeEventListener = function (ev, listener, el) {
 };
 
 exports.jsUndefined = void 0;
+
+exports.getNodeType = function(el) {
+  return el.nodeType
+}
+
+exports.nodeIsTextNode = function(el) {
+  return el.nodeType === 3
+}
+
+exports.nodeIsElementNode = function(el) {
+  return el.nodeType === 1
+}
+
+exports.getTextContent = function(el) {
+  return node.textContent;
+}
+
+exports.getNamespaceURI = function(el) {
+  return node.namespaceURI
+}

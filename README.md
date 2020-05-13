@@ -26,3 +26,6 @@ implementation included). It is intended to be extended (and likely
 
 * Read the [guide](./GUIDE.md).
 * See the [test example](./test/Main.purs).
+
+TODO:
+- use https://github.com/elm/virtual-dom/blob/5a5bcf48720bc7d53461b3cd42a9f19f119c5503/src/Elm/Kernel/VirtualDom.server.js#L196-L201

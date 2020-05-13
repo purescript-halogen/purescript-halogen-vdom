@@ -1,36 +1,38 @@
-module Halogen.VDom.Util
-  ( newMutMap
-  , pokeMutMap
-  , deleteMutMap
-  , unsafeFreeze
-  , unsafeLookup
-  , unsafeGetAny
-  , unsafeHasAny
-  , unsafeSetAny
-  , unsafeDeleteAny
-  , forE
-  , forEachE
-  , forInE
-  , replicateE
-  , diffWithIxE
-  , diffWithKeyAndIxE
-  , strMapWithIxE
-  , refEq
-  , createTextNode
-  , setTextContent
-  , createElement
-  , insertChildIx
-  , removeChild
-  , parentNode
-  , setAttribute
-  , removeAttribute
-  , hasAttribute
-  , addEventListener
-  , removeEventListener
-  , JsUndefined
-  , jsUndefined
-  , STObject'
-  ) where
+module Halogen.VDom.Util where
+  -- | ( newMutMap
+  -- | , pokeMutMap
+  -- | , deleteMutMap
+  -- | , unsafeFreeze
+  -- | , unsafeLookup
+  -- | , unsafeGetAny
+  -- | , unsafeHasAny
+  -- | , unsafeSetAny
+  -- | , unsafeDeleteAny
+  -- | , forE
+  -- | , forEachE
+  -- | , forInE
+  -- | , replicateE
+  -- | , diffWithIxE
+  -- | , diffWithKeyAndIxE
+  -- | , strMapWithIxE
+  -- | , refEq
+  -- | , createTextNode
+  -- | , setTextContent
+  -- | , createElement
+  -- | , insertChildIx
+  -- | , removeChild
+  -- | , parentNode
+  -- | , setAttribute
+  -- | , removeAttribute
+  -- | , hasAttribute
+  -- | , addEventListener
+  -- | , removeEventListener
+  -- | , JsUndefined
+  -- | , jsUndefined
+  -- | , STObject'
+  -- | , nodeIsTextNode
+  -- | , nodeIsElementNode
+  -- | ) where
 
 import Prelude
 
@@ -176,3 +178,13 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
+
+foreign import getNodeType :: EFn.EffectFn1 DOM.Node Int
+
+foreign import nodeIsTextNode :: EFn.EffectFn1 DOM.Node Boolean
+
+foreign import nodeIsElementNode :: EFn.EffectFn1 DOM.Node Boolean
+
+foreign import getTextContent :: EFn.EffectFn1 DOM.Node String
+
+foreign import getNamespaceURI :: EFn.EffectFn1 DOM.Node (Nullable Namespace)

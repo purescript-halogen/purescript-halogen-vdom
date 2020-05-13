@@ -25,7 +25,7 @@ import Unsafe.Coerce (unsafeCoerce)
 -- | fusion using a Coyoneda-like encoding.
 data VDom a w
   = Text String
-  | Elem (Maybe Namespace) ElemName a (Array (VDom a w))
+  | Elem (Maybe Namespace) ElemName a (Array (VDom a w)) -- TODO: use list instead of array, as elm doint it https://github.com/elm/virtual-dom/blob/5a5bcf48720bc7d53461b3cd42a9f19f119c5503/src/Elm/Kernel/VirtualDom.js#L1531
   | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
@@ -102,3 +102,4 @@ newtype Namespace = Namespace String
 derive instance newtypeNamespace ∷ Newtype Namespace _
 derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
+derive newtype instance showNamespace ∷ Show Namespace
