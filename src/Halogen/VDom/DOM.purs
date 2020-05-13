@@ -25,12 +25,15 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOMElement
 import Web.DOM.Node (Node) as DOM
 
+-- A function, that takes `VDom a w` and builds a `DOM.Node`
 type VDomMachine a w = Machine (VDom a w) DOM.Node
 
 type VDomStep a w = Step (VDom a w) DOM.Node
 
 type VDomInit i a w = EFn.EffectFn1 i (VDomStep a w)
 
+-- Equal to
+-- (VDomSpec a w) -> (VDOM a w -> Step (VDOM a w) DOM.Node) -> i -> Effect (Step (VDOM a w) DOM.Node)
 type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomStep a w)
 
 type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i j k l (VDomStep a w)
@@ -38,8 +41,16 @@ type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i
 -- | Widget machines recursively reference the configured spec to potentially
 -- | enable recursive trees of Widgets.
 newtype VDomSpec a w = VDomSpec
-  { buildWidget ∷ VDomSpec a w → Machine w DOM.Node
+  { buildWidget ∷ VDomSpec a w → Machine w DOM.Node -- `buildWidget` takes a circular reference to the `VDomSpec`
+  -- example:
+
+  -- buildAttributes = buildProps handler
+  -- https://github.com/purescript-halogen/purescript-halogen/blob/bb715fe5c06ba3048f4d8b377ec842cd8cf37833/src/Halogen/VDom/Driver.purs#L68-L71
+
+  -- what is handler
+  -- https://github.com/purescript-halogen/purescript-halogen/blob/bb715fe5c06ba3048f4d8b377ec842cd8cf37833/src/Halogen/Aff/Driver.purs#L203
   , buildAttributes ∷ DOM.Element → Machine a Unit
+  -- We need document to be able to call `document.createElement` function
   , document ∷ DOM.Document
   }
 
@@ -56,11 +67,11 @@ buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build
   where
   build = EFn.mkEffectFn1 case _ of
-    Text s → EFn.runEffectFn3 buildText spec build s
+    Text s → EFn.runEffectFn3 buildText spec build s -- build text machine
     Elem ns n a ch → EFn.runEffectFn6 buildElem spec build ns n a ch
-    Keyed ns n a ch → EFn.runEffectFn6 buildKeyed spec build ns n a ch
-    Widget w → EFn.runEffectFn3 buildWidget spec build w
-    Grafted g → EFn.runEffectFn1 build (runGraft g)
+    Keyed ns n a keyedCh → EFn.runEffectFn6 buildKeyed spec build ns n a keyedCh
+    Widget w → EFn.runEffectFn3 buildWidget spec build w -- machine that has full control of it's lifecycle
+    Grafted g → EFn.runEffectFn1 build (runGraft g) -- optimization
 
 type TextState a w =
   { build ∷ VDomMachine a w
@@ -71,15 +82,15 @@ type TextState a w =
 buildText ∷ ∀ a w. VDomBuilder String a w
 buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
   node ← EFn.runEffectFn2 Util.createTextNode s spec.document
-  let state = { build, node, value: s }
+  let (state :: TextState a w) = { build, node, value: s }
   pure $ mkStep $ Step node state patchText haltText
 
 patchText ∷ ∀ a w. EFn.EffectFn2 (TextState a w) (VDom a w) (VDomStep a w)
-patchText = EFn.mkEffectFn2 \state vdom → do
+patchText = EFn.mkEffectFn2 \state newVdom → do
   let { build, node, value: value1 } = state
-  case vdom of
+  case newVdom of
     Grafted g →
-      EFn.runEffectFn2 patchText state (runGraft g)
+      EFn.runEffectFn2 patchText state (runGraft g) -- Before there was a Text on this place. We call patchText instead of patch to be able to remove text
     Text value2
       | value1 == value2 →
           pure $ mkStep $ Step node state patchText haltText
@@ -89,7 +100,7 @@ patchText = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState patchText haltText
     _ → do
       EFn.runEffectFn1 haltText state
-      EFn.runEffectFn1 build vdom
+      EFn.runEffectFn1 build newVdom
 
 haltText ∷ ∀ a w. EFn.EffectFn1 (TextState a w) Unit
 haltText = EFn.mkEffectFn1 \{ node } → do
@@ -105,17 +116,28 @@ type ElemState a w =
   , children ∷ Array (VDomStep a w)
   }
 
-buildElem ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (VDom a w)) a w
+buildElem
+  ∷ ∀ a w
+  . VDomBuilder4
+    (Maybe Namespace)
+    ElemName
+    a
+    (Array (VDom a w))
+    a
+    w
 buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
+    node :: DOM.Node
     node = DOMElement.toNode el
+
+    onChild :: EFn.EffectFn2 Int (VDom a w) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn2 \ix child → do
-      res ← EFn.runEffectFn1 build child
+      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 build child
       EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
       pure res
   children ← EFn.runEffectFn2 Util.forE ch1 onChild
-  attrs ← EFn.runEffectFn1 (spec.buildAttributes el) as1
+  attrs ← EFn.runEffectFn1 (spec.buildAttributes el) as1 -- build machine that takes attributes
   let
     state =
       { build
@@ -133,7 +155,7 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchElem state (runGraft g)
-    Elem ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 → do
+    Elem ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 → do -- if new vdom is elem AND new and old are equal
       case Array.length ch1, Array.length ch2 of
         0, 0 → do
           attrs2 ← EFn.runEffectFn2 step attrs as2
@@ -149,17 +171,27 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState patchElem haltElem
         _, _ → do
           let
-            onThese = EFn.mkEffectFn3 \ix s v → do
-              res ← EFn.runEffectFn2 step s v
+            -- both elements are found
+            onThese :: EFn.EffectFn3 Int (Step (VDom a w) DOM.Node) (VDom a w) (Step (VDom a w) DOM.Node)
+            onThese = EFn.mkEffectFn3 \ix (ch1Elem :: VDomStep a w) (ch2Elem :: VDom a w) → do
+              -- execute step function (compare previous dom and ch2Elem), the patchXXX function will be called for ch2Elem element
+              -- if elements are different - old element is removed from DOM, replaced with new but not yet attached to DOM
+              res ← EFn.runEffectFn2 step ch1Elem ch2Elem
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-            onThis = EFn.mkEffectFn2 \ix s → EFn.runEffectFn1 halt s
-            onThat = EFn.mkEffectFn2 \ix v → do
-              res ← EFn.runEffectFn1 build v
+
+            -- there are no more new elements in the new list, but there is an element in old list
+            onThis :: EFn.EffectFn2 Int (Step (VDom a w) DOM.Node) Unit
+            onThis = EFn.mkEffectFn2 \ix ch1Elem → EFn.runEffectFn1 halt ch1Elem
+
+            -- there are no more new elements in the old list, but there is an element in new list
+            onThat :: EFn.EffectFn2 Int (VDom a w) (Step (VDom a w) DOM.Node)
+            onThat = EFn.mkEffectFn2 \ix ch2Elem → do
+              res ← EFn.runEffectFn1 build ch2Elem
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-          children2 ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
-          attrs2 ← EFn.runEffectFn2 step attrs as2
+          (children2 :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
+          (attrs2 :: Step a Unit) ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
               { build
@@ -195,13 +227,16 @@ buildKeyed ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (Tuple 
 buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
+    node :: DOM.Node
     node = DOMElement.toNode el
+
+    onChild :: EFn.EffectFn3 String Int (Tuple String (VDom a w)) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do
       res ← EFn.runEffectFn1 build vdom
       EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
       pure res
-  children ← EFn.runEffectFn3 Util.strMapWithIxE ch1 fst onChild
-  attrs ← EFn.runEffectFn1 (spec.buildAttributes el) as1
+  (children :: Object.Object (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn3 Util.strMapWithIxE ch1 fst onChild -- build keyed childrens
+  (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.buildAttributes el) as1
   let
     state =
       { build
@@ -237,11 +272,16 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState patchKeyed haltKeyed
         _, len2 → do
           let
+            onThese :: EFn.EffectFn4 String Int (Step (VDom a w) DOM.Node) (Tuple String (VDom a w)) (Step (VDom a w) DOM.Node)
             onThese = EFn.mkEffectFn4 \_ ix' s (Tuple _ v) → do
               res ← EFn.runEffectFn2 step s v
               EFn.runEffectFn3 Util.insertChildIx ix' (extract res) node
               pure res
+
+            onThis :: EFn.EffectFn2 String (Step (VDom a w) DOM.Node) Unit
             onThis = EFn.mkEffectFn2 \_ s → EFn.runEffectFn1 halt s
+
+            onThat :: EFn.EffectFn3 String Int (Tuple String (VDom a w)) (Step (VDom a w) DOM.Node)
             onThat = EFn.mkEffectFn3 \_ ix (Tuple _ v) → do
               res ← EFn.runEffectFn1 build v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
@@ -279,6 +319,7 @@ buildWidget ∷ ∀ a w. VDomBuilder w a w
 buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do
   res ← EFn.runEffectFn1 (spec.buildWidget (VDomSpec spec)) w
   let
+    res' :: Step (VDom a w) DOM.Node
     res' = res # unStep \(Step n s k1 k2) →
       mkStep $ Step n { build, widget: res } patchWidget haltWidget
   pure res'

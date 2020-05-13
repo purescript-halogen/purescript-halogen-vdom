@@ -24,7 +24,13 @@ foreign import data ThunkArg ∷ Type
 
 foreign import data ThunkId ∷ Type
 
-data Thunk f i = Thunk ThunkId (Fn.Fn2 ThunkArg ThunkArg Boolean) (ThunkArg → f i) ThunkArg
+--- widget type can be a thunk
+data Thunk f i
+  = Thunk
+    ThunkId
+    (Fn.Fn2 ThunkArg ThunkArg Boolean) -- (oldArg -> newArg -> isEqual)
+    (ThunkArg → f i) -- (oldArg -> output)
+    ThunkArg -- oldArg
 
 unsafeThunkId ∷ ∀ a. a → ThunkId
 unsafeThunkId = unsafeCoerce
@@ -81,13 +87,13 @@ runThunk ∷ ∀ f i. Thunk f i → f i
 runThunk (Thunk _ _ render arg) = render arg
 
 unsafeEqThunk ∷ ∀ f i. Fn.Fn2 (Thunk f i) (Thunk f i) Boolean
-unsafeEqThunk = Fn.mkFn2 \(Thunk a1 b1 _ d1) (Thunk a2 b2 _ d2) →
-  Fn.runFn2 Util.refEq a1 a2 &&
-  Fn.runFn2 Util.refEq b1 b2 &&
-  Fn.runFn2 b1 d1 d2
+unsafeEqThunk = Fn.mkFn2 \(Thunk id eqFn _ renderArg) (Thunk id' eqFn' _ renderArg') →
+  Fn.runFn2 Util.refEq id id' &&
+  Fn.runFn2 Util.refEq eqFn eqFn' &&
+  Fn.runFn2 eqFn renderArg renderArg'
 
 type ThunkState f i a w =
-  { thunk ∷ Thunk f i
+  { thunk ∷ Thunk f i -- prev thunk
   , vdom ∷ M.Step (V.VDom a w) Node
   }
 
@@ -106,10 +112,10 @@ buildThunk toVDom = renderThunk
   patchThunk ∷ EFn.EffectFn2 (ThunkState f i a w) (Thunk f i) (V.Step (Thunk f i) Node)
   patchThunk = EFn.mkEffectFn2 \state t2 → do
     let { vdom: prev, thunk: t1 } = state
-    if Fn.runFn2 unsafeEqThunk t1 t2
-      then pure $ M.mkStep $ M.Step (M.extract prev) state patchThunk haltThunk
+    if Fn.runFn2 unsafeEqThunk t1 t2 -- if eq
+      then pure $ M.mkStep $ M.Step (M.extract prev) state patchThunk haltThunk -- dont run effect
       else do
-        vdom ← EFn.runEffectFn2 M.step prev (toVDom (runThunk t2))
+        vdom ← EFn.runEffectFn2 M.step prev (toVDom (runThunk t2)) -- else create new vdom, execute step (compare and patch if need)
         pure $ M.mkStep $ M.Step (M.extract vdom) { vdom, thunk: t2 } patchThunk haltThunk
 
   haltThunk ∷ EFn.EffectFn1 (ThunkState f i a w) Unit

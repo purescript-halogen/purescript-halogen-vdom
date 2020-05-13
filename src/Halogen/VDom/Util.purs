@@ -29,6 +29,7 @@ module Halogen.VDom.Util
   , removeEventListener
   , JsUndefined
   , jsUndefined
+  , STObject'
   ) where
 
 import Prelude
@@ -48,16 +49,18 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
 
-newMutMap ∷ ∀ r a. Effect (STObject r a)
+data STObject' a -- just like STObject, but without region
+
+newMutMap ∷ ∀ a. Effect (STObject' a)
 newMutMap = unsafeCoerce STObject.new
 
-pokeMutMap ∷ ∀ r a. EFn.EffectFn3 String a (STObject r a) Unit
+pokeMutMap ∷ ∀ a. EFn.EffectFn3 String a (STObject' a) Unit
 pokeMutMap = unsafeSetAny
 
-deleteMutMap ∷ ∀ r a. EFn.EffectFn2 String (STObject r a) Unit
+deleteMutMap ∷ ∀ a. EFn.EffectFn2 String (STObject' a) Unit
 deleteMutMap = unsafeDeleteAny
 
-unsafeFreeze ∷ ∀ r a. STObject r a → Object a
+unsafeFreeze ∷ ∀ a. STObject' a → Object a
 unsafeFreeze = unsafeCoerce
 
 unsafeLookup ∷ ∀ a. Fn.Fn2 String (Object a) a
@@ -103,33 +106,33 @@ foreign import replicateE
       Unit
 
 foreign import diffWithIxE
-  ∷ ∀ b c d
+  ∷ ∀ oldElem newElem output dismissed
   . EFn.EffectFn5
-      (Array b)
-      (Array c)
-      (EFn.EffectFn3 Int b c d)
-      (EFn.EffectFn2 Int b Unit)
-      (EFn.EffectFn2 Int c d)
-      (Array d)
+      (Array oldElem) -- e.g. list of vdom elements
+      (Array newElem) -- e.g. list of vdom elements
+      (EFn.EffectFn3 Int oldElem newElem output) -- execute action when both elems are found in oldElems array and newElems array under the same index (usually used to remove old element from DOM and add new element to DOM)
+      (EFn.EffectFn2 Int oldElem dismissed) -- execute action when only oldElem is found, there are no elems left in `Array newElem` (happens when array of old elements is bigger than array of new elements)
+      (EFn.EffectFn2 Int newElem output) -- execute action when only newElem is found, there are no elems left in `Array oldElem` (happens when array of new elements is bigger than array of old elements)
+      (Array output) -- e.g. list of dom elements
 
 foreign import diffWithKeyAndIxE
-  ∷ ∀ a b c d
+  ∷ ∀ oldElem newElemWithKey output dismissed
   . EFn.EffectFn6
-      (Object.Object a)
-      (Array b)
-      (b → String)
-      (EFn.EffectFn4 String Int a b c)
-      (EFn.EffectFn2 String a d)
-      (EFn.EffectFn3 String Int b c)
-      (Object.Object c)
+      (Object.Object oldElem)
+      (Array newElemWithKey)
+      (newElemWithKey → String)
+      (EFn.EffectFn4 String Int oldElem newElemWithKey output)
+      (EFn.EffectFn2 String oldElem dismissed)
+      (EFn.EffectFn3 String Int newElemWithKey output)
+      (Object.Object output)
 
 foreign import strMapWithIxE
-  ∷ ∀ a b
+  ∷ ∀ child outputVal
   . EFn.EffectFn3
-      (Array a)
-      (a → String)
-      (EFn.EffectFn3 String Int a b)
-      (Object.Object b)
+      (Array child) -- children
+      (child → String) -- propToStrKey
+      (EFn.EffectFn3 String Int child outputVal) -- action, executed on each array element, (StrKey -> Index -> child -> outputVal)
+      (Object.Object outputVal) -- key is StrKey, val type is outputVal
 
 foreign import refEq
   ∷ ∀ a b. Fn.Fn2 a b Boolean
@@ -143,6 +146,9 @@ foreign import setTextContent
 foreign import createElement
   ∷ EFn.EffectFn3 (Nullable Namespace) ElemName DOM.Document DOM.Element
 
+-- Insert new child at index
+-- (if there is already an element on that index, that old element is moved below).
+-- If there are not enough elements - new child is moved at the end of the list.
 foreign import insertChildIx
   ∷ EFn.EffectFn3 Int DOM.Node DOM.Node Unit
 
