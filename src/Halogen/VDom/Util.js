@@ -44,36 +44,26 @@ exports.replicateE = function (n, f) {
   }
 };
 
-exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
-  var a3 = [];
-  var l1 = a1.length;
-  var l2 = a2.length;
+exports.diffWithIxE = function (oldElems, newElems, onBothElements, onOldElement, onNewElement) {
+  var outputs = [];
+  var oldElemsLength = oldElems.length;
+  var newElemsLength = newElems.length;
   var i  = 0;
   while (1) {
-    if (i < l1) {
-      if (i < l2) {
-        a3.push(f1(i, a1[i], a2[i]));
+    if (i < oldElemsLength) {
+      if (i < newElemsLength) {
+        outputs.push(onBothElements(i, oldElems[i], newElems[i]));
       } else {
-        f2(i, a1[i]);
+        onOldElement(i, oldElems[i]);
       }
-    } else if (i < l2) {
-      a3.push(f3(i, a2[i]));
+    } else if (i < newElemsLength) {
+      outputs.push(onNewElement(i, newElems[i]));
     } else {
       break;
     }
     i++;
   }
-  return a3;
-};
-
-exports.strMapWithIxE = function (as, fk, f) {
-  var o = {};
-  for (var i = 0; i < as.length; i++) {
-    var a = as[i];
-    var k = fk(a);
-    o[k] = f(k, i, a);
-  }
-  return o;
+  return outputs;
 };
 
 exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
@@ -96,6 +86,16 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
   return o2;
 };
 
+exports.strMapWithIxE = function (children, propToStrKey, f) {
+  var o = {};
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    var key = propToStrKey(child);
+    o[key] = f(key, i, child);
+  }
+  return o;
+};
+
 exports.refEq = function (a, b) {
   return a === b;
 };
@@ -116,21 +116,22 @@ exports.createElement = function (ns, name, doc) {
   }
 };
 
-exports.insertChildIx = function (i, a, b) {
-  var n = b.childNodes.item(i) || null;
-  if (n !== a) {
-    b.insertBefore(a, n);
+exports.insertChildIx = function (i, elem, parent) {
+  var referenceNode = parent.childNodes.item(i) || null;
+  if (referenceNode !== elem) {
+    // insert before referenceNode, if referenceNode is null - inserted at the end
+    parent.insertBefore(elem, referenceNode);
   }
 };
 
-exports.removeChild = function (a, b) {
-  if (b && a.parentNode === b) {
-    b.removeChild(a);
+exports.removeChild = function (elem, parent) {
+  if (parent && elem.parentNode === parent) {
+    parent.removeChild(elem);
   }
 };
 
-exports.parentNode = function (a) {
-  return a.parentNode;
+exports.parentNode = function (elem) {
+  return elem.parentNode;
 };
 
 exports.setAttribute = function (ns, attr, val, el) {
