@@ -81,8 +81,8 @@ checkTagNameIsEqualTo maybeNamespace elemName element = do
 
 checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
 checkChildrenLengthIsEqualTo expectedLength element = do
-  (elementChildren :: DOM.HTMLCollection) <- DOM.ParentNode.children (DOM.Element.toParentNode element)
-  elementChildrenLength <- DOM.HTMLCollection.length elementChildren
+  (elementChildren :: DOM.NodeList) <- DOM.childNodes (DOM.Element.toNode element)
+  elementChildrenLength <- DOM.NodeList.length elementChildren
   when (elementChildrenLength /= expectedLength) do
     EFn.runEffectFn2 Util.warnAny "Error at " { element, elementChildren }
     (throwException (error $ "Expected element children count equal to " <> show expectedLength <> ", but got " <> show elementChildrenLength))
