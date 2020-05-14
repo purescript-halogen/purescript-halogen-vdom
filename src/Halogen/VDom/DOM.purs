@@ -42,7 +42,7 @@ import Web.DOM.Node (Node) as DOM
 -- |   machine3 ← Machine.step machine2 vdomTree3
 -- |   ...
 -- | ````
-hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Node -> VDomMachine a w
+hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Element -> VDomMachine a w
 hydrateVDom spec rootNode = hydrate
   where
   build = buildVDom spec

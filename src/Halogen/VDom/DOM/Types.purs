@@ -31,7 +31,7 @@ type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomS
 
 type VDomHydrator i a w
   = EFn.EffectFn5
-  DOM.Node
+  DOM.Element -- current element
   (VDomSpec a w)
   (VDomMachine a w) -- top hydrate function
   (VDomMachine a w) -- top build function
@@ -40,7 +40,17 @@ type VDomHydrator i a w
 
 type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i j k l (VDomStep a w)
 
-type VDomHydrator4 i j k l a w = EFn.EffectFn8 DOM.Node (VDomSpec a w) (VDomMachine a w) (VDomMachine a w) i j k l (VDomStep a w)
+type VDomHydrator4 i j k l a w
+  = EFn.EffectFn8
+  DOM.Element
+  (VDomSpec a w)
+  (VDomMachine a w)
+  (VDomMachine a w)
+  i
+  j
+  k
+  l
+  (VDomStep a w)
 
 -- | Widget machines recursively reference the configured spec to potentially
 -- | enable recursive trees of Widgets.

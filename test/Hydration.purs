@@ -65,10 +65,9 @@ main = do
   let
     spec = mkSpec (DOM.toDocument doc)
     initialValue = initialState
-    appDivNode = DOM.toNode appDiv
     render = renderData
     initialVdom = un VDom (render initialValue)
-  machine ← EFn.runEffectFn1 (V.hydrateVDom spec appDivNode) initialVdom
+  machine ← EFn.runEffectFn1 (V.hydrateVDom spec appDiv) initialVdom
 
   listener ← DOM.eventListener \_ev →
     void $ EFn.runEffectFn2 V.step machine (un VDom (render state2))

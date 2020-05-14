@@ -20,6 +20,7 @@ import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
+import Web.DOM.Element (toNode) as DOM.Element
 import Web.DOM.Element as DOMElement
 import Web.DOM.Node (Node) as DOM
 
@@ -41,12 +42,14 @@ hydrateElem
     (Array (VDom a w))
     a
     w
-hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
-  checkNodeIsElementNode currentNode
-  checkNodeNamespaceIsEqualTo (toNullable ns1) currentNode
-  checkNodeNameIsEqualTo name1 currentNode
-  checkNodeChildrenLengthIsEqualTo (length ch1) currentNode
+hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
+  checkIsElementNode currentElement
+  checkTagNameIsEqualTo ns1 name1 currentElement
+  checkChildrenLengthIsEqualTo (length ch1) currentElement
   let
+    currentNode :: DOM.Node
+    currentNode = DOM.Element.toNode currentElement
+
     onChild :: EFn.EffectFn2 Int (VDom a w) (Step (VDom a w) DOM.Node)
     onChild = undefined
   children ← undefined

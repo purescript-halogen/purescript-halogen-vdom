@@ -178,13 +178,3 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
-
-foreign import getNodeType :: EFn.EffectFn1 DOM.Node Int
-
-foreign import nodeIsTextNode :: EFn.EffectFn1 DOM.Node Boolean
-
-foreign import nodeIsElementNode :: EFn.EffectFn1 DOM.Node Boolean
-
-foreign import getTextContent :: EFn.EffectFn1 DOM.Node String
-
-foreign import getNamespaceURI :: EFn.EffectFn1 DOM.Node (Nullable Namespace)

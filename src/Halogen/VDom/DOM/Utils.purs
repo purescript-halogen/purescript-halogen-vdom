@@ -6,7 +6,9 @@ import Prelude
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
-import Data.Nullable (Nullable, toNullable)
+import Data.Newtype (unwrap)
+import Data.Nullable (Nullable, toMaybe, toNullable)
+import Data.String (toUpper)
 import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.Exception (error, throwException)
@@ -16,11 +18,14 @@ import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, st
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
+import Partial.Unsafe (unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document (Document) as DOM
-import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOMElement
-import Web.DOM.Node (Node) as DOM
+import Web.DOM as DOM
+import Web.DOM.Document as DOM
+import Web.DOM.Element as DOM
+import Web.DOM.Element as DOM.Element
+import Web.DOM.Node as DOM
+import Web.DOM.NodeType as DOM.NodeType
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
 eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →
@@ -37,44 +42,46 @@ quote s = "\"" <> s <> "\""
 --------------------------------------
 -- Text
 
-checkNodeIsTextNode :: DOM.Node -> Effect Unit
-checkNodeIsTextNode node =
-  EFn.runEffectFn1 Util.nodeIsTextNode node >>= if _
+getElementNodeType :: DOM.Element -> DOM.NodeType
+getElementNodeType element = unsafePartial $ DOM.nodeType (DOM.Element.toNode element)
+
+checkElementIsNodeType :: DOM.NodeType -> DOM.Element -> Effect Unit
+checkElementIsNodeType expectedNodeType element =
+  let nodeType = getElementNodeType element
+   in if nodeType == expectedNodeType
     then pure unit
     else do
-      nodeType <- EFn.runEffectFn1 Util.getNodeType node
-      throwException (error $ "Expected node to be a text node (nodeType === 3), but got " <> show nodeType)
+      throwException (error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
 
-checkNodeTextContentIsEqTo :: String -> DOM.Node -> Effect Unit
-checkNodeTextContentIsEqTo s node = do
-  textContent <- EFn.runEffectFn1 Util.getTextContent node
-  if textContent == s
+checkIsTextNode :: DOM.Element -> Effect Unit
+checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
+
+checkTextContentIsEqTo :: String -> DOM.Element -> Effect Unit
+checkTextContentIsEqTo expectedText element = do
+  textContent <- DOM.textContent (DOM.Element.toNode element)
+  if textContent == expectedText
     then pure unit
-    else throwException (error $ "Expected node text content to equal to " <> quote s <> ", but got " <> quote textContent)
+    else throwException (error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
 
 --------------------------------------
 -- Elem
 
-checkNodeIsElementNode :: DOM.Node -> Effect Unit
-checkNodeIsElementNode node =
-  EFn.runEffectFn1 Util.nodeIsElementNode node >>= if _
-    then pure unit
-    else do
-      nodeType <- EFn.runEffectFn1 Util.getNodeType node
-      throwException (error $ "Expected node to be element node (nodeType === 1), but got " <> show nodeType)
+checkIsElementNode :: DOM.Element -> Effect Unit
+checkIsElementNode = checkElementIsNodeType DOM.NodeType.ElementNode
 
-checkNodeNamespaceIsEqualTo :: Nullable Namespace -> DOM.Node -> Effect Unit
-checkNodeNamespaceIsEqualTo namespace node = do
-  nullableNamespaceURI <- EFn.runEffectFn1 Util.getNamespaceURI node
-  if nullableNamespaceURI == namespace
-    then pure unit
-    else throwException (error $ "Expected node namespaceURI equal to " <> quote (show namespace) <> ", but got " <> quote (show nullableNamespaceURI))
+checkTagNameIsEqualTo :: Maybe Namespace -> ElemName -> DOM.Element -> Effect Unit
+checkTagNameIsEqualTo maybeNamespace elemName element = do
+  let
+    expectedTagName :: String
+    expectedTagName =
+      case maybeNamespace of
+        Just namespace -> toUpper $ unwrap namespace <> ":" <> unwrap elemName
+        Nothing -> toUpper $ unwrap elemName
+  let tagName = DOM.tagName element
+  when (tagName == expectedTagName) (throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
 
-checkNodeNameIsEqualTo :: ElemName -> DOM.Node -> Effect Unit
-checkNodeNameIsEqualTo = undefined
-
-checkNodeChildrenLengthIsEqualTo :: Int -> DOM.Node -> Effect Unit
-checkNodeChildrenLengthIsEqualTo = undefined
+checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
+checkChildrenLengthIsEqualTo = undefined
 
 undefined :: ∀ a . a
 undefined = unsafeCoerce unit

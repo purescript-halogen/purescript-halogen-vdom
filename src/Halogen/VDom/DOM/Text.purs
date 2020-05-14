@@ -1,6 +1,7 @@
 module Halogen.VDom.DOM.Text where
 
 import Halogen.VDom.DOM.Types
+import Halogen.VDom.DOM.Utils
 import Prelude
 
 import Data.Array as Array
@@ -16,9 +17,9 @@ import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, st
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
-import Halogen.VDom.DOM.Utils
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
+import Web.DOM.Element (toNode) as DOM.Element
 import Web.DOM.Element as DOMElement
 import Web.DOM.Node (Node) as DOM
 import Web.DOM.Node (textContent)
@@ -37,9 +38,13 @@ buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
 
 -- TODO: rename this to `hydrateTextDebug` and add another function `hydrateText` but without checks?
 hydrateText ∷ ∀ a w. VDomHydrator String a w
-hydrateText = EFn.mkEffectFn5 \currentNode (VDomSpec spec) _hydrate build s → do
-  checkNodeIsTextNode currentNode
-  checkNodeTextContentIsEqTo s currentNode
+hydrateText = EFn.mkEffectFn5 \currentElement (VDomSpec spec) _hydrate build s → do
+  let
+    currentNode :: DOM.Node
+    currentNode = DOM.Element.toNode currentElement
+
+  checkIsTextNode currentElement
+  checkTextContentIsEqTo s currentElement
   let (state :: TextState a w) = { build, node: currentNode, value: s }
   pure $ mkStep $ Step currentNode state patchText haltText
 
