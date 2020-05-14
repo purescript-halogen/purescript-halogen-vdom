@@ -25,6 +25,7 @@ import Web.DOM.Document as DOM
 import Web.DOM.Element as DOM
 import Web.DOM.Element as DOM.Element
 import Web.DOM.Node as DOM
+import Web.DOM.NodeList (length) as DOM.NodeList
 import Web.DOM.NodeType as DOM.NodeType
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
@@ -48,10 +49,7 @@ getElementNodeType element = unsafePartial $ DOM.nodeType (DOM.Element.toNode el
 checkElementIsNodeType :: DOM.NodeType -> DOM.Element -> Effect Unit
 checkElementIsNodeType expectedNodeType element =
   let nodeType = getElementNodeType element
-   in if nodeType == expectedNodeType
-    then pure unit
-    else do
-      throwException (error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
+   in when (nodeType /= expectedNodeType) (throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
 
 checkIsTextNode :: DOM.Element -> Effect Unit
 checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
@@ -59,9 +57,7 @@ checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
 checkTextContentIsEqTo :: String -> DOM.Element -> Effect Unit
 checkTextContentIsEqTo expectedText element = do
   textContent <- DOM.textContent (DOM.Element.toNode element)
-  if textContent == expectedText
-    then pure unit
-    else throwException (error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
+  when (textContent /= expectedText) (throwException $ error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
 
 --------------------------------------
 -- Elem
@@ -78,10 +74,13 @@ checkTagNameIsEqualTo maybeNamespace elemName element = do
         Just namespace -> toUpper $ unwrap namespace <> ":" <> unwrap elemName
         Nothing -> toUpper $ unwrap elemName
   let tagName = DOM.tagName element
-  when (tagName == expectedTagName) (throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
+  when (tagName /= expectedTagName) (throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
 
 checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
-checkChildrenLengthIsEqualTo = undefined
+checkChildrenLengthIsEqualTo expectedLength element = do
+  (elementChildren :: DOM.NodeList) <- DOM.childNodes (DOM.Element.toNode element)
+  elementChildrenLength <- DOM.NodeList.length elementChildren
+  when (elementChildrenLength /= expectedLength) (throwException (error $ "Expected element children count equal to " <> show expectedLength <> ", but got " <> show elementChildrenLength))
 
 undefined :: ∀ a . a
 undefined = unsafeCoerce unit
