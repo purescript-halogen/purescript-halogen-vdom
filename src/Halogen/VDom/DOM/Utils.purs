@@ -1,5 +1,6 @@
 module Halogen.VDom.DOM.Utils where
 
+import Data.Tuple.Nested
 import Halogen.VDom.DOM.Types
 import Prelude
 
@@ -24,9 +25,11 @@ import Web.DOM as DOM
 import Web.DOM.Document as DOM
 import Web.DOM.Element as DOM
 import Web.DOM.Element as DOM.Element
+import Web.DOM.HTMLCollection (length) as DOM.HTMLCollection
 import Web.DOM.Node as DOM
 import Web.DOM.NodeList (length) as DOM.NodeList
 import Web.DOM.NodeType as DOM.NodeType
+import Web.DOM.ParentNode (children) as DOM.ParentNode
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
 eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →
@@ -78,9 +81,11 @@ checkTagNameIsEqualTo maybeNamespace elemName element = do
 
 checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
 checkChildrenLengthIsEqualTo expectedLength element = do
-  (elementChildren :: DOM.NodeList) <- DOM.childNodes (DOM.Element.toNode element)
-  elementChildrenLength <- DOM.NodeList.length elementChildren
-  when (elementChildrenLength /= expectedLength) (throwException (error $ "Expected element children count equal to " <> show expectedLength <> ", but got " <> show elementChildrenLength))
+  (elementChildren :: DOM.HTMLCollection) <- DOM.ParentNode.children (DOM.Element.toParentNode element)
+  elementChildrenLength <- DOM.HTMLCollection.length elementChildren
+  when (elementChildrenLength /= expectedLength) do
+    EFn.runEffectFn2 Util.warnAny "Error at " { element, elementChildren }
+    (throwException (error $ "Expected element children count equal to " <> show expectedLength <> ", but got " <> show elementChildrenLength))
 
 undefined :: ∀ a . a
 undefined = unsafeCoerce unit

@@ -15,7 +15,7 @@ import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOMElement
+import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 import Halogen.VDom.DOM.Types
 import Halogen.VDom.DOM.Utils
@@ -35,7 +35,7 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
     node :: DOM.Node
-    node = DOMElement.toNode el
+    node = DOM.Element.toNode el
 
     onChild :: EFn.EffectFn3 String Int (Tuple String (VDom a w)) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do

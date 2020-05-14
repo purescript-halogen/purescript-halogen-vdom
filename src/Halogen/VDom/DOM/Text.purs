@@ -20,7 +20,7 @@ import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element (toNode) as DOM.Element
-import Web.DOM.Element as DOMElement
+import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 import Web.DOM.Node (textContent)
 

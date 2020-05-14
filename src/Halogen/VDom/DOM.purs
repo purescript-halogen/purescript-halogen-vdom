@@ -16,6 +16,7 @@ import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
+import Debug.Trace (traceM)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.DOM.Elem (buildElem) as Export
@@ -30,7 +31,7 @@ import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOMElement
+import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 
 -- | Starts an initial `VDom` machine by providing a `VDomSpec`.
@@ -43,15 +44,17 @@ import Web.DOM.Node (Node) as DOM
 -- |   ...
 -- | ````
 hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Element -> VDomMachine a w
-hydrateVDom spec rootNode = hydrate
+hydrateVDom spec rootNode = hydrate rootNode
   where
   build = buildVDom spec
-  hydrate = EFn.mkEffectFn1 case _ of
-    Text s → EFn.runEffectFn5 hydrateText rootNode spec hydrate build s
-    Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem rootNode spec hydrate build namespace elemName attribute childrenVdoms
-    Keyed namespace elemName attribute keyedChildrenVdoms → undefined
-    Widget w → undefined
-    Grafted g → undefined
+  hydrate node = EFn.mkEffectFn1 \vdom -> do
+    traceM { message: "hydrateVDom", vdom }
+    case vdom of
+      Text s → EFn.runEffectFn5 hydrateText node spec hydrate build s
+      Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem node spec hydrate build namespace elemName attribute childrenVdoms
+      Keyed namespace elemName attribute keyedChildrenVdoms → undefined
+      Widget w → undefined
+      Grafted g → undefined
 
 buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build

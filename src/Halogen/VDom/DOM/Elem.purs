@@ -1,15 +1,17 @@
 module Halogen.VDom.DOM.Elem where
 
+import Data.Tuple.Nested
 import Halogen.VDom.DOM.Types
 import Halogen.VDom.DOM.Utils
 import Prelude
 
-import Data.Array (length)
+import Data.Array (length, zip)
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
+import Debug.Trace (traceM)
 import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
@@ -18,11 +20,14 @@ import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, st
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
-import Web.DOM.Document (Document) as DOM
-import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element (toNode) as DOM.Element
-import Web.DOM.Element as DOMElement
-import Web.DOM.Node (Node) as DOM
+import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM.Document as DOM
+import Web.DOM.Element as DOM
+import Web.DOM.Element as DOM.Element
+import Web.DOM.HTMLCollection (toArray) as DOM.HTMLCollection
+import Web.DOM.Node as DOM
+import Web.DOM.NodeList as DOM.NodeList
+import Web.DOM.ParentNode as DOM.ParentNode
 
 type ElemState a w =
   { build ∷ VDomMachine a w
@@ -44,16 +49,24 @@ hydrateElem
     w
 hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
   checkIsElementNode currentElement
+  traceM { ns1, name1, as1, ch1 }
   checkTagNameIsEqualTo ns1 name1 currentElement
   checkChildrenLengthIsEqualTo (length ch1) currentElement
   let
     currentNode :: DOM.Node
     currentNode = DOM.Element.toNode currentElement
 
-    onChild :: EFn.EffectFn2 Int (VDom a w) (Step (VDom a w) DOM.Node)
-    onChild = undefined
-  children ← undefined
-  attrs ← undefined
+  (currentElementChildren :: Array DOM.Element) <- DOM.ParentNode.children (DOM.Element.toParentNode currentElement) >>= DOM.HTMLCollection.toArray
+  traceM { currentElementChildren }
+
+  let
+    onChild :: EFn.EffectFn2 Int (DOM.Element /\ (VDom a w)) (Step (VDom a w) DOM.Node)
+    onChild = EFn.mkEffectFn2 \ix (element /\ child) → do
+      traceM { ix, element, child }
+      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
+      pure res
+  children ← EFn.runEffectFn2 Util.forE (zip currentElementChildren ch1) onChild
+  attrs ← EFn.runEffectFn1 (spec.buildAttributes currentElement) as1
   let
     state =
       { build
@@ -78,7 +91,7 @@ buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
     node :: DOM.Node
-    node = DOMElement.toNode el
+    node = DOM.Element.toNode el
 
     onChild :: EFn.EffectFn2 Int (VDom a w) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn2 \ix child → do

@@ -187,3 +187,11 @@ exports.getTextContent = function(el) {
 exports.getNamespaceURI = function(el) {
   return node.namespaceURI
 }
+
+exports.warnAny = function(message, x) {
+  console.warn(message, x)
+}
+
+exports.logAny = function(message, x) {
+  console.log(message, x)
+}

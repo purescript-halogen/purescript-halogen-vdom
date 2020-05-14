@@ -19,13 +19,15 @@ import Halogen.VDom.Util (addEventListener) as Util
 import Test.TestVdom (VDom(..), elem, keyed, mkSpec, text, thunk, (:=))
 import Web.DOM.Element (Element)
 import Web.DOM.Element (toNode) as DOM
+import Web.DOM.Element (toParentNode) as DOM.Element
 import Web.DOM.Node (Node, appendChild) as DOM
 import Web.DOM.ParentNode (ParentNode)
+import Web.DOM.ParentNode (firstElementChild) as DOM.ParentNode
 import Web.DOM.ParentNode (querySelector, QuerySelector(..)) as DOM
+import Web.Event.EventTarget (eventListener, EventListener) as DOM
 import Web.HTML (window) as DOM
 import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
 import Web.HTML.Window (document) as DOM
-import Web.Event.EventTarget (eventListener, EventListener) as DOM
 
 type State = Array { classes :: String, text :: String }
 
@@ -60,6 +62,10 @@ main = do
   win ← DOM.window
   doc ← DOM.document win
   appDiv ← findRequiredElement "#app" (DOM.toParentNode doc)
+
+  rootElement <- (appDiv # DOM.Element.toParentNode # DOM.ParentNode.firstElementChild)
+    >>= maybe (throwException (error $ "rootElement not found")) pure
+
   updateStateButton ← findRequiredElement "#update-state-button" (DOM.toParentNode doc)
 
   let
@@ -67,7 +73,7 @@ main = do
     initialValue = initialState
     render = renderData
     initialVdom = un VDom (render initialValue)
-  machine ← EFn.runEffectFn1 (V.hydrateVDom spec appDiv) initialVdom
+  machine ← EFn.runEffectFn1 (V.hydrateVDom spec rootElement) initialVdom
 
   listener ← DOM.eventListener \_ev →
     void $ EFn.runEffectFn2 V.step machine (un VDom (render state2))

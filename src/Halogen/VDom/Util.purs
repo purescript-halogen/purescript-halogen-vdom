@@ -178,3 +178,7 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
+
+foreign import warnAny ∷ ∀ a . EFn.EffectFn2 String a Unit
+
+foreign import logAny ∷ ∀ a . EFn.EffectFn2 String a Unit

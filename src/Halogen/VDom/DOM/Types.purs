@@ -15,7 +15,7 @@ import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOMElement
+import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 
 -- A function, that takes `VDom a w` and builds a `DOM.Node`
@@ -33,7 +33,7 @@ type VDomHydrator i a w
   = EFn.EffectFn5
   DOM.Element -- current element
   (VDomSpec a w)
-  (VDomMachine a w) -- top hydrate function
+  (DOM.Element -> VDomMachine a w) -- top hydrate function
   (VDomMachine a w) -- top build function
   i
   (VDomStep a w)
@@ -44,7 +44,7 @@ type VDomHydrator4 i j k l a w
   = EFn.EffectFn8
   DOM.Element
   (VDomSpec a w)
-  (VDomMachine a w)
+  (DOM.Element -> VDomMachine a w)
   (VDomMachine a w)
   i
   j
@@ -64,6 +64,7 @@ newtype VDomSpec a w = VDomSpec
   -- what is handler
   -- https://github.com/purescript-halogen/purescript-halogen/blob/bb715fe5c06ba3048f4d8b377ec842cd8cf37833/src/Halogen/Aff/Driver.purs#L203
   , buildAttributes ∷ DOM.Element → Machine a Unit
+
   -- We need document to be able to call `document.createElement` function
   , document ∷ DOM.Document
   }
