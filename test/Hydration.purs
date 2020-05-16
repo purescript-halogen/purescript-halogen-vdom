@@ -46,7 +46,8 @@ state2 =
 renderData ∷ State → VDom Void
 renderData stateArray =
   -- | keyed "div" [ "className" := "component" ] (stateArray <#> renderElement)
-  keyed "div" [ "className" := "component" ] (map (\state → Tuple state.key (renderElement state)) stateArray)
+  -- | keyed "div" [ "className" := "component" ] (map (\state → Tuple state.key (renderElement state)) stateArray)
+  keyed "div" [ "className" := "component" ] (map (\state → Tuple state.key (thunk renderElement state)) stateArray)
   where
     renderElement elementState =
       elem "div"

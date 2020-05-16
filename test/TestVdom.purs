@@ -10,7 +10,7 @@ import Data.Tuple (Tuple)
 import Halogen.VDom as V
 import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp, hydrateProp)
 import Halogen.VDom.DOM.Prop.Types (BuildPropFunction)
-import Halogen.VDom.Thunk (Thunk, thunk1, buildThunk)
+import Halogen.VDom.Thunk (Thunk, thunk1, buildThunk, hydrateThunk)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Document as DOM
 import Web.DOM.Element (Element) as DOM
@@ -49,6 +49,7 @@ mkSpec
   → V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
 mkSpec document = V.VDomSpec
   { buildWidget: buildThunk (un VDom)
+  , hydrateWidget: hydrateThunk (un VDom)
   , buildAttributes: buildProp (const (pure unit))
   , hydrateAttributes: hydrateProp (const (pure unit))
   , document

@@ -6,12 +6,21 @@ import Effect.Uncurried as EFn
 import Halogen.VDom.Machine (Step, Step'(..), halt, mkStep, step, unStep)
 import Halogen.VDom.Types (VDom(..), runGraft)
 import Web.DOM.Node (Node) as DOM
-import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep, VDomHydrator)
 
 type WidgetState a w =
   { build ∷ VDomMachine a w
   , widget ∷ Step w DOM.Node
   }
+
+hydrateWidget ∷ ∀ a w. VDomHydrator w a w
+hydrateWidget = EFn.mkEffectFn5 \elem (VDomSpec spec) _hydrate build w → do
+  res ← EFn.runEffectFn1 (spec.hydrateWidget (VDomSpec spec) elem) w
+  let
+    res' :: Step (VDom a w) DOM.Node
+    res' = res # unStep \(Step n s k1 k2) →
+      mkStep $ Step n { build, widget: res } patchWidget haltWidget
+  pure res'
 
 buildWidget ∷ ∀ a w. VDomBuilder w a w
 buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do

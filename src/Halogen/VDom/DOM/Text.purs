@@ -17,12 +17,6 @@ type TextState a w =
   , value ∷ String
   }
 
-buildText ∷ ∀ a w. VDomBuilder String a w
-buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
-  node ← EFn.runEffectFn2 Util.createTextNode s spec.document
-  let (state :: TextState a w) = { build, node, value: s }
-  pure $ mkStep $ Step node state patchText haltText
-
 -- TODO: rename this to `hydrateTextDebug` and add another function `hydrateText` but without checks?
 hydrateText ∷ ∀ a w. VDomHydrator String a w
 hydrateText = EFn.mkEffectFn5 \currentElement (VDomSpec spec) _hydrate build s → do
@@ -34,6 +28,12 @@ hydrateText = EFn.mkEffectFn5 \currentElement (VDomSpec spec) _hydrate build s �
   checkTextContentIsEqTo s currentElement
   let (state :: TextState a w) = { build, node: currentNode, value: s }
   pure $ mkStep $ Step currentNode state patchText haltText
+
+buildText ∷ ∀ a w. VDomBuilder String a w
+buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
+  node ← EFn.runEffectFn2 Util.createTextNode s spec.document
+  let (state :: TextState a w) = { build, node, value: s }
+  pure $ mkStep $ Step node state patchText haltText
 
 patchText ∷ ∀ a w. EFn.EffectFn2 (TextState a w) (VDom a w) (VDomStep a w)
 patchText = EFn.mkEffectFn2 \state newVdom → do

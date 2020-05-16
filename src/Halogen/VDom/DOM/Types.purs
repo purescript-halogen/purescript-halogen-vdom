@@ -58,6 +58,7 @@ type VDomHydrator4 i j k l a w
 -- | enable recursive trees of Widgets.
 newtype VDomSpec a w = VDomSpec
   { buildWidget ∷ VDomSpec a w → Machine w DOM.Node -- `buildWidget` takes a circular reference to the `VDomSpec`
+  , hydrateWidget ∷ VDomSpec a w → DOM.Element → Machine w DOM.Node
   -- example:
 
   -- buildAttributes = buildProps handler
