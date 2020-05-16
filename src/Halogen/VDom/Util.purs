@@ -44,12 +44,14 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (Namespace, ElemName)
+import Halogen.VDom.Types
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
+import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 
 data STObject' a -- just like STObject, but without region
 
@@ -169,6 +171,9 @@ foreign import removeAttribute
 foreign import hasAttribute
   ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Boolean
 
+foreign import getAttribute
+  ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element (Nullable String)
+
 foreign import addEventListener
   ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
 
@@ -182,3 +187,26 @@ foreign import jsUndefined ∷ JsUndefined
 foreign import warnAny ∷ ∀ a . EFn.EffectFn2 String a Unit
 
 foreign import logAny ∷ ∀ a . EFn.EffectFn2 String a Unit
+
+undefined :: ∀ a . a
+undefined = unsafeCoerce unit
+
+fullAttributeName ∷ Maybe Namespace → ElemName → String
+fullAttributeName maybeNamespace elemName =
+  case maybeNamespace of
+    Just namespace -> unwrap namespace <> ":" <> unwrap elemName
+    Nothing -> unwrap elemName
+
+eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
+eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →
+  if name1 == name2
+    then case ns1, ns2 of
+      Just (Namespace ns1'), Just (Namespace ns2') | ns1' == ns2' → true
+      Nothing, Nothing → true
+      _, _ → false
+    else false
+
+quote :: String -> String
+quote s = "\"" <> s <> "\""
+
+foreign import anyToString ∷ ∀ a . a → String

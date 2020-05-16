@@ -1,28 +1,15 @@
 module Halogen.VDom.DOM.Text where
 
-import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Utils
-import Prelude
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomHydrator, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Checkers (checkIsTextNode, checkTextContentIsEqTo)
+import Prelude (Unit, bind, discard, otherwise, pure, ($), (==))
 
-import Data.Array as Array
-import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
-import Effect (Effect)
-import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
+import Halogen.VDom.Machine (Step'(..), mkStep)
+import Halogen.VDom.Types (VDom(..), runGraft)
 import Halogen.VDom.Util as Util
-import Web.DOM.Document (Document) as DOM
-import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element (toNode) as DOM.Element
 import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
-import Web.DOM.Node (textContent)
 
 type TextState a w =
   { build ∷ VDomMachine a w

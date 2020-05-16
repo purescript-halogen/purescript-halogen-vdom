@@ -1,23 +1,12 @@
 module Halogen.VDom.DOM.Widget where
 
-import Prelude
+import Prelude (Unit, bind, discard, pure, (#), ($))
 
-import Data.Array as Array
-import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
-import Halogen.VDom.Util as Util
-import Web.DOM.Document (Document) as DOM
-import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOM.Element
+import Halogen.VDom.Machine (Step, Step'(..), halt, mkStep, step, unStep)
+import Halogen.VDom.Types (VDom(..), runGraft)
 import Web.DOM.Node (Node) as DOM
-import Halogen.VDom.DOM.Types
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep)
 
 type WidgetState a w =
   { build ∷ VDomMachine a w

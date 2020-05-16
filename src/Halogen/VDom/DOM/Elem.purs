@@ -2,7 +2,7 @@ module Halogen.VDom.DOM.Elem where
 
 import Data.Tuple.Nested
 import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Utils
+import Halogen.VDom.DOM.Checkers
 import Prelude
 
 import Data.Array (length, zip)
@@ -28,6 +28,7 @@ import Web.DOM.HTMLCollection (toArray) as DOM.HTMLCollection
 import Web.DOM.Node as DOM
 import Web.DOM.NodeList as DOM.NodeList
 import Web.DOM.ParentNode as DOM.ParentNode
+-- | import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
 
 type ElemState a w =
   { build ∷ VDomMachine a w
@@ -117,7 +118,7 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchElem state (runGraft g)
-    Elem ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 → do -- if new vdom is elem AND new and old are equal
+    Elem ns2 name2 as2 ch2 | Fn.runFn4 Util.eqElemSpec ns1 name1 ns2 name2 → do -- if new vdom is elem AND new and old are equal
       case Array.length ch1, Array.length ch2 of
         0, 0 → do
           attrs2 ← EFn.runEffectFn2 step attrs as2

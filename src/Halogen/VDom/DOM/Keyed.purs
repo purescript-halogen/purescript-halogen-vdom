@@ -18,7 +18,7 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Utils
+import Halogen.VDom.DOM.Checkers
 
 type KeyedState a w =
   { build ∷ VDomMachine a w
@@ -62,7 +62,7 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchKeyed state (runGraft g)
-    Keyed ns2 name2 as2 ch2 | Fn.runFn4 eqElemSpec ns1 name1 ns2 name2 →
+    Keyed ns2 name2 as2 ch2 | Fn.runFn4 Util.eqElemSpec ns1 name1 ns2 name2 →
       case len1, Array.length ch2 of
         0, 0 → do
           attrs2 ← EFn.runEffectFn2 Machine.step attrs as2

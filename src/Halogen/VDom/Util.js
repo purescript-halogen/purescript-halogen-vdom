@@ -158,6 +158,14 @@ exports.hasAttribute = function (ns, attr, el) {
   }
 };
 
+exports.getAttribute = function (ns, attr, el) {
+  if (ns != null) {
+    return el.getAttributeNS(ns, attr);
+  } else {
+    return el.getAttribute(attr);
+  }
+};
+
 exports.addEventListener = function (ev, listener, el) {
   el.addEventListener(ev, listener, false);
 };
@@ -187,6 +195,10 @@ exports.getTextContent = function(el) {
 exports.getNamespaceURI = function(el) {
   return node.namespaceURI
 }
+
+exports.anyToString = function (a) {
+  return a.toString();
+};
 
 exports.warnAny = function(message, x) {
   console.warn(message, x)

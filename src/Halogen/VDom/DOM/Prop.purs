@@ -3,40 +3,71 @@ module Halogen.VDom.DOM.Prop
   , buildProp
   ) where
 
-import Prelude
+import Data.String.Common (joinWith)
+import Halogen.VDom.DOM.Prop.Implementation (applyProp, diffProp, hydrateApplyProp, mbEmit, removeProp)
+import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropState)
+import Halogen.VDom.DOM.Prop.Utils (propToStrKey)
+import Halogen.VDom.Util (STObject')
+import Prelude (Unit, bind, discard, pure, unit, when, (#), ($), (<>), (>))
 
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
-import Data.Nullable (null, toNullable, Nullable)
-import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
-import Effect.Ref as Ref
+import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Foreign (typeOf)
 import Foreign.Object as Object
 import Halogen.VDom as V
+import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
+import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
 import Halogen.VDom.Machine (Step, Step'(..), mkStep)
-import Halogen.VDom.Types (Namespace(..))
+import Halogen.VDom.Set as Set
 import Halogen.VDom.Util as Util
-import Halogen.VDom.Util (STObject')
-import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
-import Web.Event.Event (EventType(..), Event) as DOM
-import Web.Event.EventTarget (eventListener, EventListener) as DOM
 
-import Halogen.VDom.DOM.Prop.Implementation
-import Halogen.VDom.DOM.Prop.Utils
-import Halogen.VDom.DOM.Prop.Types
-import Halogen.VDom.DOM.Prop.Types
-  ( Prop(..)
-  , ElemRef(..)
-  , PropValue
-  , propFromString
-  , propFromBoolean
-  , propFromInt
-  , propFromNumber
-  )
-  as Export
+-- inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
+mkExtraAttributeNames ∷ DOM.Element → Effect (Set.Set String)
+mkExtraAttributeNames el = do
+  let
+    namedNodeMap = Attributes.attributes el
+
+  (set ∷ Set.Set String) ← Set.mkSet
+  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \name → EFn.runEffectFn2 Set.addSetMember name set)
+  pure set
+
+throwErrorIfExtraAttributeNamesNonEmpty ∷ Set.Set String → Effect Unit
+throwErrorIfExtraAttributeNamesNonEmpty extraAttributeNames = do
+  when (Set.setSize extraAttributeNames > 0)
+    (do
+    throwException $ error $ "Extra attributes from the server: " <> (Set.setToArray extraAttributeNames # joinWith ", ")
+    )
+
+hydrateProp
+  ∷ ∀ a
+  . (a → Effect Unit)
+  → DOM.Element
+  → V.Machine (Array (Prop a)) Unit
+hydrateProp emit el = renderProp
+  where
+  renderProp ∷ EFn.EffectFn1 (Array (Prop a)) (Step (Array (Prop a)) Unit)
+  renderProp = EFn.mkEffectFn1 \ps1 → do
+    (events ∷ STObject' (EventListenerAndCurrentEmitterInputBuilder a)) ← Util.newMutMap
+
+    extraAttributeNames ← mkExtraAttributeNames el
+
+    -- for each prop in array:
+    --   if prop is attr - dont set attr to element, store attr under "attr/XXX" key in a returned object
+    --   if prop is property - dont set property to element, store property under "prop/XXX" key in a returned object
+    --   if prop is handler for DOM.EventType - start listen and add listener to `events` mutable map, store handler under "handler/EVENTTYPE" in a returned object
+    --   if prop is ref updater - store `emitterInputBuilder` in under a `ref` key in a returned object, call `emitter` on creation of all props (now) and on halt of all props (later)
+    (props ∷ Object.Object (Prop a)) ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (Fn.runFn4 hydrateApplyProp extraAttributeNames el emit events)
+    let
+      (state ∷ PropState a) =
+        { events: Util.unsafeFreeze events
+        , props
+        , el
+        , emit
+        }
+    pure $ mkStep $ Step unit state patchProp haltProp
 
 -- | A `Machine`` for applying attributes, properties, and event handlers.
 -- | An emitter effect must be provided to respond to events. For example,
