@@ -1,6 +1,7 @@
 module Halogen.VDom.DOM.Prop
   ( module Export
   , buildProp
+  , hydrateProp
   ) where
 
 import Data.String.Common (joinWith)
@@ -16,13 +17,13 @@ import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
-import Halogen.VDom as V
 import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
-import Halogen.VDom.Machine (Step, Step'(..), mkStep)
+import Halogen.VDom.Machine (Step, Step'(..), mkStep, Machine)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
+import Halogen.VDom.DOM.Prop.Types (BuildPropFunction)
 
 -- inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
 mkExtraAttributeNames ∷ DOM.Element → Effect (Set.Set String)
@@ -30,22 +31,20 @@ mkExtraAttributeNames el = do
   let
     namedNodeMap = Attributes.attributes el
 
-  (set ∷ Set.Set String) ← Set.mkSet
-  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \name → EFn.runEffectFn2 Set.addSetMember name set)
+  (set ∷ Set.Set String) ← Set.empty
+  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \name → EFn.runEffectFn2 Set.add name set)
   pure set
 
 throwErrorIfExtraAttributeNamesNonEmpty ∷ Set.Set String → Effect Unit
 throwErrorIfExtraAttributeNamesNonEmpty extraAttributeNames = do
-  when (Set.setSize extraAttributeNames > 0)
+  when (Set.size extraAttributeNames > 0)
     (do
-    throwException $ error $ "Extra attributes from the server: " <> (Set.setToArray extraAttributeNames # joinWith ", ")
+    throwException $ error $ "Extra attributes from the server: " <> (Set.toArray extraAttributeNames # joinWith ", ")
     )
 
 hydrateProp
   ∷ ∀ a
-  . (a → Effect Unit)
-  → DOM.Element
-  → V.Machine (Array (Prop a)) Unit
+  . BuildPropFunction a
 hydrateProp emit el = renderProp
   where
   renderProp ∷ EFn.EffectFn1 (Array (Prop a)) (Step (Array (Prop a)) Unit)
@@ -74,9 +73,7 @@ hydrateProp emit el = renderProp
 -- | to allow arbitrary effects in event handlers, one could use `id`.
 buildProp
   ∷ ∀ a
-  . (a → Effect Unit) -- emitter, for example the global broadcaster function for all elements in halogen component
-  → DOM.Element
-  → V.Machine (Array (Prop a)) Unit -- Machine takes array of properties for that element, outputs nothing
+  . BuildPropFunction a
 buildProp emit el = renderProp
   where
   -- what it does - creates a machine, that contains state

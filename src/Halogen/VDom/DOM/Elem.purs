@@ -28,7 +28,7 @@ import Web.DOM.HTMLCollection (toArray) as DOM.HTMLCollection
 import Web.DOM.Node as DOM
 import Web.DOM.NodeList as DOM.NodeList
 import Web.DOM.ParentNode as DOM.ParentNode
--- | import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
+import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
 
 type ElemState a w =
   { build ∷ VDomMachine a w
@@ -66,8 +66,8 @@ hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 
     onChild = EFn.mkEffectFn2 \ix (element /\ child) → do
       (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
       pure res
-  children ← EFn.runEffectFn2 Util.forE (zip currentElementChildren' ch1) onChild
-  attrs ← EFn.runEffectFn1 (spec.buildAttributes currentElement) as1
+  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (zip currentElementChildren' ch1) onChild
+  (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
     state =
       { build

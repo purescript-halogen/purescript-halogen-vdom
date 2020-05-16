@@ -19,6 +19,7 @@ import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 import Halogen.VDom.DOM.Types
 import Halogen.VDom.DOM.Checkers
+import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
 
 type KeyedState a w =
   { build ∷ VDomMachine a w

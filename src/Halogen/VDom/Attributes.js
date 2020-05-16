@@ -1,3 +1,3 @@
 exports.attributes = function (el) {
-  return el.attributes();
+  return el.attributes;
 };

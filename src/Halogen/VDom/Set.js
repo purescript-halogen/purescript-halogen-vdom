@@ -1,19 +1,19 @@
-exports.mkSet = function() {
+exports.empty = function() {
   return new Set()
 }
 
-exports.removeSetMember = function(value, set) {
-  set.remove(value)
+exports.delete = function(value, set) {
+  set.delete(value)
 }
 
-exports.addSetMember = function(value, set) {
+exports.add = function(value, set) {
   set.add(value)
 }
 
-exports.setSize = function(set) {
+exports.size = function(set) {
   return set.size
 }
 
-exports.setToArray = function(set) {
+exports.toArray = function(set) {
   return Array.from(set)
 }

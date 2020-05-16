@@ -34,7 +34,7 @@ checkAttributeExistsAndIsEqual maybeNamespace attributeName expectedElementValue
 
 checkPropExistsAndIsEqual ∷ String → PropValue → DOM.Element → Effect Unit
 checkPropExistsAndIsEqual propName expectedPropValue el = do
-  let propValue = Fn.runFn2 unsafeGetProperty "value" el
+  let propValue = Fn.runFn2 unsafeGetProperty propName el
   if Fn.runFn2 Util.refEq propValue expectedPropValue
     then pure unit
     else do
@@ -53,12 +53,12 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
     Attribute maybeNamespace attributeName val → do
       checkAttributeExistsAndIsEqual maybeNamespace attributeName val el
       let fullAttributeName' = fullAttributeName maybeNamespace (ElemName attributeName) -- should be lowercased
-      EFn.runEffectFn2 Set.removeSetMember fullAttributeName' extraAttributeNames
+      EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
       pure v
     Property propName val → do
       checkPropExistsAndIsEqual propName val el
       let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
-      EFn.runEffectFn2 Set.removeSetMember fullAttributeName' extraAttributeNames
+      EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
       pure v
     Handler eventType emitterInputBuilder → do
       EFn.runEffectFn5 applyPropHandler el emit events eventType emitterInputBuilder

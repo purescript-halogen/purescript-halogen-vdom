@@ -7,12 +7,14 @@ import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
+import Effect (Effect)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
+import Halogen.VDom.DOM.Prop.Types (BuildPropFunction, Prop)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
@@ -64,6 +66,7 @@ newtype VDomSpec a w = VDomSpec
   -- what is handler
   -- https://github.com/purescript-halogen/purescript-halogen/blob/bb715fe5c06ba3048f4d8b377ec842cd8cf37833/src/Halogen/Aff/Driver.purs#L203
   , buildAttributes ∷ DOM.Element → Machine a Unit
+  , hydrateAttributes ∷ DOM.Element → Machine a Unit
 
   -- We need document to be able to call `document.createElement` function
   , document ∷ DOM.Document

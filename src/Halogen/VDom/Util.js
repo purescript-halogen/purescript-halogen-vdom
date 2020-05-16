@@ -197,7 +197,7 @@ exports.getNamespaceURI = function(el) {
 }
 
 exports.anyToString = function (a) {
-  return a.toString();
+  return String(a);
 };
 
 exports.warnAny = function(message, x) {

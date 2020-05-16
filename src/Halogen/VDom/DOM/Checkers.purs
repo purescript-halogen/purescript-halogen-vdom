@@ -1,11 +1,7 @@
 module Halogen.VDom.DOM.Checkers where
 
-import Data.Tuple.Nested
-import Halogen.VDom.DOM.Types
 import Prelude
 
-import Data.Array as Array
-import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Nullable (Nullable, toMaybe, toNullable)

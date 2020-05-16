@@ -8,10 +8,14 @@ import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, un)
 import Data.Tuple (Tuple)
 import Halogen.VDom as V
-import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp)
+import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp, hydrateProp)
+import Halogen.VDom.DOM.Prop.Types (BuildPropFunction)
 import Halogen.VDom.Thunk (Thunk, thunk1, buildThunk)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document (Document) as DOM
+import Web.DOM.Document as DOM
+import Web.DOM.Element (Element) as DOM
+import Halogen.VDom.Machine (Machine)
+import Effect (Effect)
 
 infixr 1 prop as :=
 
@@ -37,11 +41,15 @@ text a = VDom $ V.Text a
 thunk ∷ ∀ a b. (a → VDom b) → a → VDom b
 thunk render val = VDom $ V.Widget $ Fn.runFn2 thunk1 render val
 
+myfn :: ((Void → Effect Unit) -> DOM.Element -> Machine (Array (Prop Void)) Unit) → DOM.Element → Machine (Array (Prop Void)) Unit
+myfn buildProp element = buildProp (const (pure unit)) element
+
 mkSpec
   ∷ DOM.Document
   → V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
 mkSpec document = V.VDomSpec
   { buildWidget: buildThunk (un VDom)
   , buildAttributes: buildProp (const (pure unit))
+  , hydrateAttributes: hydrateProp (const (pure unit))
   , document
   }

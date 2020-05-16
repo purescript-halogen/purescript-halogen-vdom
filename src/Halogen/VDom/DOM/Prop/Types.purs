@@ -11,11 +11,8 @@ import Effect.Ref as Ref
 import Effect.Uncurried as EFn
 import Foreign (typeOf)
 import Foreign.Object as Object
-import Halogen.VDom as V
-import Halogen.VDom.Machine (Step, Step'(..), mkStep)
+import Halogen.VDom.Machine (Step, Step'(..), mkStep, Machine)
 import Halogen.VDom.Types (Namespace(..))
-import Halogen.VDom.Util as Util
-import Halogen.VDom.Util (STObject')
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
 import Web.Event.Event (EventType(..), Event) as DOM
@@ -93,3 +90,8 @@ type PropState a =
   , el ∷ DOM.Element
   , emit ∷ a → Effect Unit
   }
+
+type BuildPropFunction a
+  = (a → Effect Unit) -- emitter, for example the global broadcaster function for all elements in halogen component
+  → DOM.Element
+  → Machine (Array (Prop a)) Unit -- Machine takes array of properties for that element, outputs nothing
