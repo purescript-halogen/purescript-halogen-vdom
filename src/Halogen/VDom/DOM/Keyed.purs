@@ -16,10 +16,13 @@ import Halogen.VDom.Util as Util
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
-import Web.DOM.Node (Node) as DOM
+import Web.DOM.NodeList as DOM.NodeList
+import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM.Node as DOM
 import Halogen.VDom.DOM.Types
 import Halogen.VDom.DOM.Checkers
 import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
+import Data.Tuple.Nested
 
 type KeyedState a w =
   { build ∷ VDomMachine a w
@@ -30,6 +33,51 @@ type KeyedState a w =
   , children ∷ Object.Object (VDomStep a w)
   , length ∷ Int
   }
+
+hydrateKeyed
+  ∷ ∀ a w
+  . VDomHydrator4
+    (Maybe Namespace)
+    ElemName
+    a
+    (Array (Tuple String (VDom a w)))
+    a
+    w
+hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do
+  checkIsElementNode currentElement
+  checkTagNameIsEqualTo ns1 name1 currentElement
+  checkChildrenLengthIsEqualTo (Array.length keyedChildren) currentElement
+  let
+    currentNode :: DOM.Node
+    currentNode = DOM.Element.toNode currentElement
+
+  (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
+
+  let
+    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- TODO
+
+    onChild :: EFn.EffectFn3 String Int ({ element ∷ DOM.Element, keyedChild ∷ Tuple String (VDom a w) }) (Step (VDom a w) DOM.Node)
+    onChild = EFn.mkEffectFn3 \k ix ({ element, keyedChild: Tuple _ child }) → do
+      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
+      pure res
+  (children :: Object.Object (Step (VDom a w) DOM.Node)) ←
+    EFn.runEffectFn3
+    Util.strMapWithIxE
+    (Array.zipWith (\element keyedChild → { element, keyedChild }) currentElementChildren' keyedChildren)
+    (\{ keyedChild } → fst keyedChild)
+    onChild
+  (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
+  let
+    state =
+      { build
+      , node: currentNode
+      , attrs
+      , ns: ns1
+      , name: name1
+      , children
+      , length: Array.length keyedChildren
+      }
+  pure $ mkStep $ Step currentNode state patchKeyed haltKeyed
 
 buildKeyed ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w))) a w
 buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do

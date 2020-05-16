@@ -53,9 +53,9 @@ hydrateVDom spec rootNode = hydrate rootNode
     case vdom of
       Text s → EFn.runEffectFn5 hydrateText node spec hydrate build s
       Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem node spec hydrate build namespace elemName attribute childrenVdoms
-      Keyed namespace elemName attribute keyedChildrenVdoms → undefined
+      Keyed namespace elemName attribute keyedChildrenVdoms → EFn.runEffectFn8 hydrateKeyed node spec hydrate build namespace elemName attribute keyedChildrenVdoms
       Widget w → undefined
-      Grafted g → undefined
+      Grafted g → EFn.runEffectFn1 (hydrate node) (runGraft g)
 
 buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build

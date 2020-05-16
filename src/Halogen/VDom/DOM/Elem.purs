@@ -5,7 +5,7 @@ import Halogen.VDom.DOM.Types
 import Halogen.VDom.DOM.Checkers
 import Prelude
 
-import Data.Array (length, zip)
+import Data.Array (length, zip) as Array
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
@@ -50,9 +50,8 @@ hydrateElem
     w
 hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
   checkIsElementNode currentElement
-  traceM { ns1, name1, as1, ch1 }
   checkTagNameIsEqualTo ns1 name1 currentElement
-  checkChildrenLengthIsEqualTo (length ch1) currentElement
+  checkChildrenLengthIsEqualTo (Array.length ch1) currentElement
   let
     currentNode :: DOM.Node
     currentNode = DOM.Element.toNode currentElement
@@ -66,7 +65,7 @@ hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 
     onChild = EFn.mkEffectFn2 \ix (element /\ child) → do
       (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
       pure res
-  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (zip currentElementChildren' ch1) onChild
+  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren' ch1) onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
     state =
