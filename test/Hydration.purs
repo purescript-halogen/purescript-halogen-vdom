@@ -29,23 +29,24 @@ import Web.HTML (window) as DOM
 import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
 import Web.HTML.Window (document) as DOM
 
-type State = Array { classes ∷ String, text ∷ String }
+type State = Array { classes ∷ String, text ∷ String, key ∷ String }
 
 initialState ∷ State
 initialState =
-  [ { classes: "label1", text: "test label 1" }
-  , { classes: "label2", text: "test label 2" }
+  [ { classes: "label1", text: "test label 1", key: "1" }
+  , { classes: "label2", text: "test label 2", key: "2" }
   ]
 
 state2 ∷ State
 state2 =
-  [ { classes: "label2", text: "test label 1.1" }
-  , { classes: "label1", text: "test label 2.1" }
+  [ { classes: "label2", text: "test label 1.1", key: "1" }
+  , { classes: "label1", text: "test label 2.1", key: "2" }
   ]
 
 renderData ∷ State → VDom Void
-renderData st =
-  elem "div" [ "className" := "component" ] (st <#> renderElement)
+renderData stateArray =
+  -- | keyed "div" [ "className" := "component" ] (stateArray <#> renderElement)
+  keyed "div" [ "className" := "component" ] (map (\state → Tuple state.key (renderElement state)) stateArray)
   where
     renderElement elementState =
       elem "div"
