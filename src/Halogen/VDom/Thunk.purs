@@ -21,10 +21,7 @@ import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Node (Node)
 import Halogen.VDom.DOM.Types (VDomMachine)
-import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOM.Element
-import Web.DOM.Node (Node) as DOM
 
 foreign import data ThunkArg ∷ Type
 
@@ -109,7 +106,7 @@ hydrateThunk
   → V.VDomSpec a w
   → DOM.Element
   → V.Machine (Thunk f i) Node
-hydrateThunk toVDom spec element = mkThunkBuilder (\spec → V.hydrateVDom spec element) toVDom spec
+hydrateThunk toVDom spec element = mkThunkBuilder (\spec' → V.hydrateVDom spec' element) toVDom spec
 
 buildThunk
   ∷ ∀ f i a w

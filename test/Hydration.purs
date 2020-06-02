@@ -2,29 +2,21 @@ module Test.Hydration where
 
 import Prelude
 
-import Control.Alternative (void)
-import Data.Foldable (for_, traverse_)
-import Data.Maybe (Maybe(..), isNothing, maybe)
-import Data.Newtype (un, wrap)
+import Data.Maybe (maybe)
+import Data.Newtype (un)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Exception (error, throwException)
-import Effect.Ref as Ref
-import Effect.Timer as Timer
 import Effect.Uncurried as EFn
 import Halogen.VDom as V
-import Halogen.VDom.DOM.Prop (Prop)
-import Halogen.VDom.Thunk (Thunk)
 import Halogen.VDom.Util (addEventListener) as Util
 import Test.TestVdom (VDom(..), elem, keyed, mkSpec, text, thunk, (:=))
 import Web.DOM.Element (Element)
-import Web.DOM.Element (toNode) as DOM
 import Web.DOM.Element (toParentNode) as DOM.Element
-import Web.DOM.Node (Node, appendChild) as DOM
 import Web.DOM.ParentNode (ParentNode)
 import Web.DOM.ParentNode (firstElementChild) as DOM.ParentNode
 import Web.DOM.ParentNode (querySelector, QuerySelector(..)) as DOM
-import Web.Event.EventTarget (eventListener, EventListener) as DOM
+import Web.Event.EventTarget (eventListener) as DOM
 import Web.HTML (window) as DOM
 import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
 import Web.HTML.Window (document) as DOM

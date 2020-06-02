@@ -1,8 +1,6 @@
 module Halogen.VDom.Set where
 
-import Halogen.VDom.DOM.Checkers
-import Halogen.VDom.Util
-import Prelude
+import Prelude (Unit)
 
 import Effect (Effect)
 import Effect.Uncurried (EffectFn2) as EFn

@@ -1,42 +1,36 @@
 module Halogen.VDom.DOM.Checkers where
 
-import Prelude
+import Prelude (Unit, bind, discard, show, when, ($), (/=), (<>))
 
-import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
-import Data.Nullable (Nullable, toMaybe, toNullable)
+import Data.Maybe (Maybe)
 import Data.String (toUpper)
-import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
+import Halogen.VDom.Types (ElemName, Namespace)
 import Halogen.VDom.Util
 import Partial.Unsafe (unsafePartial)
-import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM as DOM
-import Web.DOM.Document as DOM
-import Web.DOM.Element as DOM
+import Web.DOM (NodeList, NodeType) as DOM
+import Web.DOM.Element (Element, tagName) as DOM
 import Web.DOM.Element as DOM.Element
-import Web.DOM.HTMLCollection (length) as DOM.HTMLCollection
-import Web.DOM.Node as DOM
+import Web.DOM.Node (childNodes, nodeType, textContent) as DOM
 import Web.DOM.NodeList (length) as DOM.NodeList
 import Web.DOM.NodeType as DOM.NodeType
-import Web.DOM.ParentNode (children) as DOM.ParentNode
 
 --------------------------------------
 -- Text
 
-getElementNodeType :: DOM.Element -> DOM.NodeType
-getElementNodeType element = unsafePartial $ DOM.nodeType (DOM.Element.toNode element)
 
 checkElementIsNodeType :: DOM.NodeType -> DOM.Element -> Effect Unit
-checkElementIsNodeType expectedNodeType element =
-  let nodeType = getElementNodeType element
-   in when (nodeType /= expectedNodeType) (throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
+checkElementIsNodeType = checkElementIsNodeType'
+  where
+    getElementNodeType :: DOM.Element -> DOM.NodeType
+    getElementNodeType element = unsafePartial $ DOM.nodeType (DOM.Element.toNode element)
+
+    checkElementIsNodeType' :: DOM.NodeType -> DOM.Element -> Effect Unit
+    checkElementIsNodeType' expectedNodeType element =
+      let nodeType = getElementNodeType element
+       in when (nodeType /= expectedNodeType) (throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
 
 checkIsTextNode :: DOM.Element -> Effect Unit
 checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode

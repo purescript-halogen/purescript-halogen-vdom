@@ -2,21 +2,17 @@ module Halogen.VDom.DOM.Prop.Types where
 
 import Prelude
 
-import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (null, toNullable, Nullable)
-import Data.Tuple (Tuple(..), fst, snd)
+import Data.Maybe (Maybe)
+import Data.Tuple (Tuple)
 import Effect (Effect)
 import Effect.Ref as Ref
-import Effect.Uncurried as EFn
-import Foreign (typeOf)
 import Foreign.Object as Object
-import Halogen.VDom.Machine (Step, Step'(..), mkStep, Machine)
-import Halogen.VDom.Types (Namespace(..))
+import Halogen.VDom.Machine (Machine)
+import Halogen.VDom.Types (Namespace)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
-import Web.Event.Event (EventType(..), Event) as DOM
-import Web.Event.EventTarget (eventListener, EventListener) as DOM
+import Web.Event.Event (Event, EventType) as DOM
+import Web.Event.EventTarget (EventListener) as DOM
 
 -- | Attributes, properties, event handlers, and element lifecycles.
 -- | Parameterized by the type of handlers outputs.

@@ -9,10 +9,9 @@ import Data.Newtype (class Newtype, un)
 import Data.Tuple (Tuple)
 import Halogen.VDom as V
 import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp, hydrateProp)
-import Halogen.VDom.DOM.Prop.Types (BuildPropFunction)
 import Halogen.VDom.Thunk (Thunk, thunk1, buildThunk, hydrateThunk)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document as DOM
+import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Halogen.VDom.Machine (Machine)
 import Effect (Effect)

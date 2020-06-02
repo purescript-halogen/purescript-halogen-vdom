@@ -1,40 +1,6 @@
 module Halogen.VDom.Util where
-  -- | ( newMutMap
-  -- | , pokeMutMap
-  -- | , deleteMutMap
-  -- | , unsafeFreeze
-  -- | , unsafeLookup
-  -- | , unsafeGetAny
-  -- | , unsafeHasAny
-  -- | , unsafeSetAny
-  -- | , unsafeDeleteAny
-  -- | , forE
-  -- | , forEachE
-  -- | , forInE
-  -- | , replicateE
-  -- | , diffWithIxE
-  -- | , diffWithKeyAndIxE
-  -- | , strMapWithIxE
-  -- | , refEq
-  -- | , createTextNode
-  -- | , setTextContent
-  -- | , createElement
-  -- | , insertChildIx
-  -- | , removeChild
-  -- | , parentNode
-  -- | , setAttribute
-  -- | , removeAttribute
-  -- | , hasAttribute
-  -- | , addEventListener
-  -- | , removeEventListener
-  -- | , JsUndefined
-  -- | , jsUndefined
-  -- | , STObject'
-  -- | , nodeIsTextNode
-  -- | , nodeIsElementNode
-  -- | ) where
 
-import Prelude
+import Prelude (Unit, unit, (<>), (==))
 
 import Data.Function.Uncurried as Fn
 import Data.Nullable (Nullable)
@@ -42,9 +8,8 @@ import Effect (Effect)
 import Effect.Uncurried as EFn
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types
+import Halogen.VDom.Types (ElemName(..), Namespace(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM

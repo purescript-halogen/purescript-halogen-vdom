@@ -1,34 +1,23 @@
 module Halogen.VDom.DOM.Elem where
 
-import Data.Tuple.Nested
-import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Checkers
+import Data.Tuple.Nested (type (/\), (/\))
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
 import Prelude
 
 import Data.Array (length, zip) as Array
-import Data.Array as Array
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
-import Debug.Trace (traceM)
-import Effect (Effect)
-import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
+import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
+import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document as DOM
-import Web.DOM.Element as DOM
+import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
-import Web.DOM.HTMLCollection (toArray) as DOM.HTMLCollection
-import Web.DOM.Node as DOM
+import Web.DOM.Node (Node, childNodes) as DOM
 import Web.DOM.NodeList as DOM.NodeList
-import Web.DOM.ParentNode as DOM.ParentNode
-import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
 
 type ElemState a w =
   { build ∷ VDomMachine a w

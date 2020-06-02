@@ -6,7 +6,7 @@ module Halogen.VDom.DOM.Prop
 
 import Data.String.Common (joinWith)
 import Halogen.VDom.DOM.Prop.Implementation (applyProp, diffProp, hydrateApplyProp, mbEmit, removeProp)
-import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropState)
+import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropState, BuildPropFunction)
 import Halogen.VDom.DOM.Prop.Utils (propToStrKey)
 import Halogen.VDom.Util (STObject')
 import Prelude (Unit, bind, discard, pure, unit, when, (#), ($), (<>), (>))
@@ -19,11 +19,10 @@ import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
-import Halogen.VDom.Machine (Step, Step'(..), mkStep, Machine)
+import Halogen.VDom.Machine (Step, Step'(..), mkStep)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
-import Halogen.VDom.DOM.Prop.Types (BuildPropFunction)
 
 -- inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
 mkExtraAttributeNames ∷ DOM.Element → Effect (Set.Set String)

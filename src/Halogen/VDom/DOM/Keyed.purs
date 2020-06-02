@@ -1,28 +1,25 @@
 module Halogen.VDom.DOM.Keyed where
 
-import Prelude
+import Prelude (Unit, bind, discard, pure, ($), (>>=))
 
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
+import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
+import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
 import Halogen.VDom.Util as Util
-import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
 import Web.DOM.NodeList as DOM.NodeList
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Node as DOM
-import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Checkers
-import Halogen.VDom.DOM.Prop (hydrateProp, buildProp)
-import Data.Tuple.Nested
+import Web.DOM.Node (Node, childNodes) as DOM
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
 
 type KeyedState a w =
   { build ∷ VDomMachine a w

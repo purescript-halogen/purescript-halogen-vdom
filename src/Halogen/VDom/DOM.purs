@@ -4,36 +4,20 @@ module Halogen.VDom.DOM
   , hydrateVDom
   ) where
 
-import Halogen.VDom.DOM.Elem
-import Halogen.VDom.DOM.Keyed
-import Halogen.VDom.DOM.Text
-import Halogen.VDom.DOM.Types
-import Halogen.VDom.DOM.Widget
-import Prelude
+import Halogen.VDom.DOM.Elem (buildElem, hydrateElem)
+import Halogen.VDom.DOM.Keyed (buildKeyed, hydrateKeyed)
+import Halogen.VDom.DOM.Text (buildText, hydrateText)
+import Halogen.VDom.DOM.Types (VDomMachine, VDomSpec)
+import Halogen.VDom.DOM.Widget (buildWidget, hydrateWidget)
 
-import Data.Array as Array
-import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
-import Debug.Trace (traceM)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
 import Halogen.VDom.DOM.Elem (buildElem) as Export
 import Halogen.VDom.DOM.Keyed (buildKeyed) as Export
 import Halogen.VDom.DOM.Text (buildText) as Export
 import Halogen.VDom.DOM.Types (VDomSpec(..)) as Export
-import Halogen.VDom.DOM.Checkers
 import Halogen.VDom.DOM.Widget (buildWidget) as Export
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
-import Halogen.VDom.Util as Util
-import Halogen.VDom.Util
-import Web.DOM.Document (Document) as DOM
+import Halogen.VDom.Types (VDom(..), runGraft)
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOM.Element
-import Web.DOM.Node (Node) as DOM
 
 -- | Starts an initial `VDom` machine by providing a `VDomSpec`.
 -- |

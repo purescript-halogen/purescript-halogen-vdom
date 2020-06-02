@@ -2,22 +2,11 @@ module Halogen.VDom.DOM.Types where
 
 import Prelude
 
-import Data.Array as Array
-import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
-import Effect (Effect)
 import Effect.Uncurried as EFn
-import Foreign.Object as Object
-import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
-import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft)
-import Halogen.VDom.Util as Util
-import Halogen.VDom.DOM.Prop.Types (BuildPropFunction, Prop)
+import Halogen.VDom.Machine (Machine, Step)
+import Halogen.VDom.Types (VDom)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
-import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 
 -- A function, that takes `VDom a w` and builds a `DOM.Node`
