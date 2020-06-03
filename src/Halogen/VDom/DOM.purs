@@ -19,15 +19,6 @@ import Halogen.VDom.DOM.Widget (buildWidget) as Export
 import Halogen.VDom.Types (VDom(..), runGraft)
 import Web.DOM.Element (Element) as DOM
 
--- | Starts an initial `VDom` machine by providing a `VDomSpec`.
--- |
--- | ```purescript
--- | main = do
--- |   machine1 ← buildVDom spec vdomTree1
--- |   machine2 ← Machine.step machine1 vdomTree2
--- |   machine3 ← Machine.step machine2 vdomTree3
--- |   ...
--- | ````
 hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Element -> VDomMachine a w
 hydrateVDom spec rootNode = hydrate rootNode
   where
@@ -40,6 +31,15 @@ hydrateVDom spec rootNode = hydrate rootNode
       Widget w → EFn.runEffectFn5 hydrateWidget node spec hydrate build w
       Grafted g → EFn.runEffectFn1 (hydrate node) (runGraft g)
 
+-- | Starts an initial `VDom` machine by providing a `VDomSpec`.
+-- |
+-- | ```purescript
+-- | main = do
+-- |   machine1 ← buildVDom spec vdomTree1
+-- |   machine2 ← Machine.step machine1 vdomTree2
+-- |   machine3 ← Machine.step machine2 vdomTree3
+-- |   ...
+-- | ````
 buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build
   where
