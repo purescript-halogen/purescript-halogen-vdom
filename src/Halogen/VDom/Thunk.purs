@@ -105,26 +105,25 @@ hydrateThunk
   → V.VDomSpec a w
   → DOM.Element
   → V.Machine (Thunk f i) Node
-hydrateThunk toVDom spec element = mkThunkBuilder (\spec' → V.hydrateVDom spec' element) toVDom spec
+hydrateThunk toVDom spec element = mkThunkBuilder (V.hydrateVDom spec element) toVDom
 
 buildThunk
   ∷ ∀ f i a w
   . (f i → V.VDom a w)
   → V.VDomSpec a w
   → V.Machine (Thunk f i) Node
-buildThunk = mkThunkBuilder V.buildVDom
+buildThunk toVDom spec = mkThunkBuilder (V.buildVDom spec) toVDom
 
 mkThunkBuilder
   ∷ ∀ f i a w
-  . (V.VDomSpec a w → VDomMachine a w)
+  . VDomMachine a w
   → (f i → V.VDom a w)
-  → V.VDomSpec a w
   → V.Machine (Thunk f i) Node
-mkThunkBuilder buildVDom toVDom = renderThunk
+mkThunkBuilder build toVDom = renderThunk
   where
-  renderThunk ∷ V.VDomSpec a w → V.Machine (Thunk f i) Node
-  renderThunk spec = EFn.mkEffectFn1 \t → do
-    vdom ← EFn.runEffectFn1 (buildVDom spec) (toVDom (runThunk t))
+  renderThunk ∷ V.Machine (Thunk f i) Node
+  renderThunk = EFn.mkEffectFn1 \t → do
+    vdom ← EFn.runEffectFn1 build (toVDom (runThunk t))
     pure $ M.mkStep $ M.Step (M.extract vdom) { thunk: t, vdom } patchThunk haltThunk
 
   patchThunk ∷ EFn.EffectFn2 (ThunkState f i a w) (Thunk f i) (V.Step (Thunk f i) Node)
