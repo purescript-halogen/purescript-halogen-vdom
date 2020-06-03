@@ -88,6 +88,6 @@ type PropState a =
   }
 
 type BuildPropFunction a
-  = (a → Effect Unit) -- emitter, for example the global broadcaster function for all elements in halogen component
+  = (a → Effect Unit) -- Emitter, for example the global broadcaster function for all elements in halogen component
   → DOM.Element
-  → Machine (Array (Prop a)) Unit -- Machine takes array of properties for that element, outputs nothing
+  → Machine (Array (Prop a)) Unit

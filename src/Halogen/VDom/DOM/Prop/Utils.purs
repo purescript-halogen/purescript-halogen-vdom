@@ -29,9 +29,9 @@ unsafeGetProperty = Util.unsafeGetAny
 
 removeProperty ∷ EFn.EffectFn2 String DOM.Element Unit
 removeProperty = EFn.mkEffectFn2 \key el →
-  EFn.runEffectFn3 Util.hasAttribute (null ∷ Nullable Namespace) key el >>= if _ -- If attr exists on element
-    then EFn.runEffectFn3 Util.removeAttribute (null ∷ Nullable Namespace) key el -- remove it using el.removeAttribute()
-    else case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of -- If it's property - set to following
+  EFn.runEffectFn3 Util.hasAttribute (null ∷ Nullable Namespace) key el >>= if _
+    then EFn.runEffectFn3 Util.removeAttribute (null ∷ Nullable Namespace) key el
+    else case typeOf (Fn.runFn2 Util.unsafeGetAny key el) of
       "string" → EFn.runEffectFn3 Util.unsafeSetAny key "" el
       _        → case key of
         "rowSpan" → EFn.runEffectFn3 Util.unsafeSetAny key 1 el

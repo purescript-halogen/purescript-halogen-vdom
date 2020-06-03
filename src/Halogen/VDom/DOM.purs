@@ -44,8 +44,8 @@ buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build
   where
   build = EFn.mkEffectFn1 case _ of
-    Text s → EFn.runEffectFn3 buildText spec build s -- build text machine
+    Text s → EFn.runEffectFn3 buildText spec build s
     Elem namespace elemName a childrenVdoms → EFn.runEffectFn6 buildElem spec build namespace elemName a childrenVdoms
     Keyed namespace elemName a keyedChildrenVdoms → EFn.runEffectFn6 buildKeyed spec build namespace elemName a keyedChildrenVdoms
-    Widget w → EFn.runEffectFn3 buildWidget spec build w -- machine that has full control of it's lifecycle
-    Grafted g → EFn.runEffectFn1 build (runGraft g) -- optimization
+    Widget w → EFn.runEffectFn3 buildWidget spec build w
+    Grafted g → EFn.runEffectFn1 build (runGraft g)

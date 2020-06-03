@@ -52,11 +52,6 @@ hydrateProp emit el = renderProp
 
     extraAttributeNames ← mkExtraAttributeNames el
 
-    -- for each prop in array:
-    --   if prop is attr - dont set attr to element, store attr under "attr/XXX" key in a returned object
-    --   if prop is property - dont set property to element, store property under "prop/XXX" key in a returned object
-    --   if prop is handler for DOM.EventType - start listen and add listener to `events` mutable map, store handler under "handler/EVENTTYPE" in a returned object
-    --   if prop is ref updater - store `emitterInputBuilder` in under a `ref` key in a returned object, call `emitter` on creation of all props (now) and on halt of all props (later)
     (props ∷ Object.Object (Prop a)) ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (Fn.runFn4 hydrateApplyProp extraAttributeNames el emit events)
     let
       (state ∷ PropState a) =
@@ -75,19 +70,9 @@ buildProp
   . BuildPropFunction a
 buildProp emit el = renderProp
   where
-  -- what it does - creates a machine, that contains state
-  -- on next step - patches prop
-  -- on halt - all ref watchers are notified that element is removed
-
   renderProp ∷ EFn.EffectFn1 (Array (Prop a)) (Step (Array (Prop a)) Unit)
   renderProp = EFn.mkEffectFn1 \ps1 → do
     (events ∷ STObject' (EventListenerAndCurrentEmitterInputBuilder a)) ← Util.newMutMap
-
-    -- for each prop in array:
-    --   if prop is attr - set attr to element, store attr under "attr/XXX" key in a returned object
-    --   if prop is property - set property to element, store property under "prop/XXX" key in a returned object
-    --   if prop is handler for DOM.EventType - start listen and add listener to `events` mutable map, store handler under "handler/EVENTTYPE" in a returned object
-    --   if prop is ref updater - store `emitterInputBuilder` in under a `ref` key in a returned object, call `emitter` on creation of all props (now) and on halt of all props (later)
     (props ∷ Object.Object (Prop a)) ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (Fn.runFn3 applyProp el emit events)
     let
       (state ∷ PropState a) =

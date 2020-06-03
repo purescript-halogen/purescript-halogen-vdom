@@ -88,7 +88,7 @@ buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
       EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
       pure res
   children ← EFn.runEffectFn2 Util.forE ch1 onChild
-  attrs ← EFn.runEffectFn1 (spec.buildAttributes el) as1 -- build machine that takes attributes
+  attrs ← EFn.runEffectFn1 (spec.buildAttributes el) as1
   let
     state =
       { build

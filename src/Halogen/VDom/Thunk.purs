@@ -27,7 +27,6 @@ foreign import data ThunkArg ∷ Type
 
 foreign import data ThunkId ∷ Type
 
---- widget type can be a thunk
 data Thunk f i
   = Thunk
     ThunkId
