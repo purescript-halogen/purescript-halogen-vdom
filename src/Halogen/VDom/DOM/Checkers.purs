@@ -8,7 +8,7 @@ import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Halogen.VDom.Types (ElemName, Namespace)
-import Halogen.VDom.Util
+import Halogen.VDom.Util (fullAttributeName, quote, warnAny)
 import Partial.Unsafe (unsafePartial)
 import Web.DOM (NodeList, NodeType) as DOM
 import Web.DOM.Element (Element, tagName) as DOM
@@ -30,7 +30,9 @@ checkElementIsNodeType = checkElementIsNodeType'
     checkElementIsNodeType' :: DOM.NodeType -> DOM.Element -> Effect Unit
     checkElementIsNodeType' expectedNodeType element =
       let nodeType = getElementNodeType element
-       in when (nodeType /= expectedNodeType) (throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
+       in when (nodeType /= expectedNodeType) (do
+          EFn.runEffectFn2 warnAny "Error at " { element }
+          throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
 
 checkIsTextNode :: DOM.Element -> Effect Unit
 checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
@@ -38,7 +40,9 @@ checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
 checkTextContentIsEqTo :: String -> DOM.Element -> Effect Unit
 checkTextContentIsEqTo expectedText element = do
   textContent <- DOM.textContent (DOM.Element.toNode element)
-  when (textContent /= expectedText) (throwException $ error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
+  when (textContent /= expectedText) (do
+    EFn.runEffectFn2 warnAny "Error at " { element }
+    throwException $ error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
 
 --------------------------------------
 -- Elem
@@ -53,7 +57,9 @@ checkTagNameIsEqualTo maybeNamespace elemName element = do
     expectedTagName :: String
     expectedTagName = toUpper $ fullAttributeName maybeNamespace elemName
   let tagName = DOM.tagName element
-  when (tagName /= expectedTagName) (throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
+  when (tagName /= expectedTagName) (do
+    EFn.runEffectFn2 warnAny "Error at " { element }
+    throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
 
 checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
 checkChildrenLengthIsEqualTo expectedLength element = do
