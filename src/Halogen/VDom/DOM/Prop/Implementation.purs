@@ -1,26 +1,25 @@
 module Halogen.VDom.DOM.Prop.Implementation where
 
-import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..))
-import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkPropExistsAndIsEqual)
-import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
-import Prelude (Unit, bind, discard, pure, unit, (==))
-
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
+import Data.String.Common (toLower)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
 import Effect.Ref as Ref
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
+import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkPropExistsAndIsEqual)
+import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..))
+import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
+import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
-import Halogen.VDom.Util (STObject', fullAttributeName)
+import Halogen.VDom.Util (STObject', fullAttributeName, warnAny)
 import Halogen.VDom.Util as Util
+import Prelude (Unit, bind, discard, pure, unit, (==))
 import Web.DOM.Element (Element) as DOM
 import Web.Event.Event (EventType(..), Event) as DOM
 import Web.Event.EventTarget (eventListener, EventListener) as DOM
-import Data.String.Common (toLower)
-import Halogen.VDom.Set as Set
 
 hydrateApplyProp
   ∷ ∀ a
@@ -39,8 +38,17 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
       pure v
     Property propName val → do
       checkPropExistsAndIsEqual propName val el
-      let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
-      EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
+
+      -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual" { propName, val, el, extraAttributeNames }
+
+      if propName == "className"
+        then EFn.runEffectFn2 Set.delete "class" extraAttributeNames
+        else do
+          let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
+          EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
+
+      -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual after" { propName, val, el, extraAttributeNames }
+
       pure v
     Handler eventType emitterInputBuilder → do
       EFn.runEffectFn5 applyPropHandler el emit events eventType emitterInputBuilder

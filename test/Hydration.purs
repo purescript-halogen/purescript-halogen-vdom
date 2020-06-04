@@ -2,18 +2,24 @@ module Test.Hydration where
 
 import Prelude
 
+import Effect.Exception (error, throwException)
+import Data.Either (either)
 import Data.Newtype (un)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Uncurried as EFn
 import Halogen.VDom as V
+import Halogen.VDom.Finders (findElementFirstChild)
+import Web.DOM.ParentNode (ParentNode)
+import Web.DOM (Element)
+import Web.DOM.ParentNode (querySelector, QuerySelector(..)) as DOM
+import Data.Maybe (maybe)
 import Halogen.VDom.Util (addEventListener) as Util
 import Test.TestVdom (VDom(..), elem, keyed, mkSpec, text, thunk, (:=))
 import Web.Event.EventTarget (eventListener) as DOM
 import Web.HTML (window) as DOM
 import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
 import Web.HTML.Window (document) as DOM
-import Halogen.VDom.Finders (findRequiredElement, findRootElementInsideOfRootContainer)
 
 type State = Array { classes ∷ String, text ∷ String, key ∷ String }
 
@@ -40,13 +46,19 @@ renderData stateArray =
       [ "className" := elementState.classes ]
       [ text elementState.text ]
 
+findRequiredElement ∷ String → ParentNode → Effect Element
+findRequiredElement selector parentNode = do
+  maybeElement <- DOM.querySelector (DOM.QuerySelector selector) parentNode
+  maybe (throwException $ error $ selector <> " not found") pure maybeElement
+
 main ∷ Effect Unit
 main = do
   win ← DOM.window
   doc ← DOM.document win
+
   appDiv ← findRequiredElement "#app" (DOM.toParentNode doc)
 
-  rootElement ← findRootElementInsideOfRootContainer appDiv
+  rootElement ← findElementFirstChild appDiv >>= either (throwException <<< error) pure
 
   updateStateButton ← findRequiredElement "#update-state-button" (DOM.toParentNode doc)
 

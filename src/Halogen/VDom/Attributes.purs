@@ -14,6 +14,6 @@ foreign import attributes ∷ DOM.Element → NamedNodeMap
 forEachE
   ∷ EFn.EffectFn2
       NamedNodeMap
-      (EFn.EffectFn1 String Unit)
+      (EFn.EffectFn1 { name :: String } Unit)
       Unit
 forEachE = unsafeCoerce Util.forEachE

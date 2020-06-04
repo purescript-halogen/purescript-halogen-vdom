@@ -4,11 +4,13 @@ module Halogen.VDom.DOM
   , hydrateVDom
   ) where
 
+import Prelude
 import Halogen.VDom.DOM.Elem (buildElem, hydrateElem)
 import Halogen.VDom.DOM.Keyed (buildKeyed, hydrateKeyed)
 import Halogen.VDom.DOM.Text (buildText, hydrateText)
 import Halogen.VDom.DOM.Types (VDomMachine, VDomSpec)
 import Halogen.VDom.DOM.Widget (buildWidget, hydrateWidget)
+import Halogen.VDom.Util (warnAny)
 
 import Effect.Uncurried as EFn
 import Halogen.VDom.DOM.Elem (buildElem) as Export
@@ -24,6 +26,7 @@ hydrateVDom spec rootNode = hydrate rootNode
   where
   build = buildVDom spec
   hydrate node = EFn.mkEffectFn1 \vdom -> do
+    EFn.runEffectFn2 warnAny "Path" { node, vdom }
     case vdom of
       Text s → EFn.runEffectFn5 hydrateText node spec hydrate build s
       Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem node spec hydrate build namespace elemName attribute childrenVdoms

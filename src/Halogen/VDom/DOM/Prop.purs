@@ -4,42 +4,20 @@ module Halogen.VDom.DOM.Prop
   , hydrateProp
   ) where
 
-import Data.String.Common (joinWith)
+import Prelude
 import Halogen.VDom.DOM.Prop.Implementation (applyProp, diffProp, hydrateApplyProp, mbEmit, removeProp)
 import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropState, BuildPropFunction)
 import Halogen.VDom.DOM.Prop.Utils (propToStrKey)
 import Halogen.VDom.Util (STObject')
-import Prelude (Unit, bind, discard, pure, unit, when, (#), ($), (<>), (>))
 
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
-import Effect (Effect)
-import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
-import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
 import Halogen.VDom.Machine (Step, Step'(..), mkStep)
-import Halogen.VDom.Set as Set
 import Halogen.VDom.Util as Util
-import Web.DOM.Element (Element) as DOM
-
--- inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
-mkExtraAttributeNames ∷ DOM.Element → Effect (Set.Set String)
-mkExtraAttributeNames el = do
-  let
-    namedNodeMap = Attributes.attributes el
-
-  (set ∷ Set.Set String) ← Set.empty
-  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \name → EFn.runEffectFn2 Set.add name set)
-  pure set
-
-throwErrorIfExtraAttributeNamesNonEmpty ∷ Set.Set String → Effect Unit
-throwErrorIfExtraAttributeNamesNonEmpty extraAttributeNames = do
-  when (Set.size extraAttributeNames > 0)
-    (do
-    throwException $ error $ "Extra attributes from the server: " <> (Set.toArray extraAttributeNames # joinWith ", ")
-    )
+import Halogen.VDom.DOM.Prop.Checkers (mkExtraAttributeNames, checkExtraAttributeNamesIsEmpty)
 
 hydrateProp
   ∷ ∀ a
@@ -53,6 +31,9 @@ hydrateProp emit el = renderProp
     extraAttributeNames ← mkExtraAttributeNames el
 
     (props ∷ Object.Object (Prop a)) ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (Fn.runFn4 hydrateApplyProp extraAttributeNames el emit events)
+
+    checkExtraAttributeNamesIsEmpty extraAttributeNames el
+
     let
       (state ∷ PropState a) =
         { events: Util.unsafeFreeze events
