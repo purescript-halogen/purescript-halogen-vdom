@@ -14,7 +14,7 @@ import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListe
 import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
-import Halogen.VDom.Util (STObject', fullAttributeName, warnAny)
+import Halogen.VDom.Util (STObject', fullAttributeName)
 import Halogen.VDom.Util as Util
 import Prelude (Unit, bind, discard, pure, unit, (==))
 import Web.DOM.Element (Element) as DOM
