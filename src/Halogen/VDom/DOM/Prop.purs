@@ -22,7 +22,7 @@ import Foreign (typeOf)
 import Foreign.Object as Object
 import Halogen.VDom as V
 import Halogen.VDom.Machine (Step'(..), mkStep)
-import Halogen.VDom.Types (Namespace(..))
+import Halogen.VDom.Types (Namespace(..), FnObject)
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
@@ -72,9 +72,10 @@ propFromNumber = unsafeCoerce
 buildProp
   ∷ ∀ a
   . (a → Effect Unit)
+  → FnObject
   → DOM.Element
   → V.Machine (Array (Prop a)) Unit
-buildProp emit el = renderProp
+buildProp emit fnObject el = renderProp
   where
   renderProp = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
@@ -93,7 +94,7 @@ buildProp emit el = renderProp
       onThese = Fn.runFn2 diffProp prevEvents events
       onThis = removeProp prevEvents
       onThat = applyProp "patch" events
-    props ← EFn.runEffectFn7 Util.diffPropWithKeyAndIxE ps1 ps2 propToStrKey onThese onThis onThat el
+    props ← EFn.runEffectFn8 Util.diffPropWithKeyAndIxE fnObject ps1 ps2 propToStrKey onThese onThis onThat el
     let
       nextState =
         { events: Util.unsafeFreeze events
@@ -132,7 +133,7 @@ buildProp emit el = renderProp
               f' ← Ref.read ref
               EFn.runEffectFn1 mbEmit (f' ev)
             EFn.runEffectFn3 Util.pokeMutMap ty (Tuple listener ref) events
-            EFn.runEffectFn4 Util.addEventListener pr ty listener el
+            EFn.runEffectFn5 Util.addEventListener fnObject pr ty listener el
             pure v
       Ref f → do
         EFn.runEffectFn1 mbEmit (f (Created el))
@@ -185,8 +186,14 @@ buildProp emit el = renderProp
       Ref _ →
         pure unit
       BHandler ty _ → do
-         _ <- Util.cancelBehavior ty
+         _ <- EFn.runEffectFn1 fnObject.cancelBehavior ty
          pure unit
+
+  updateProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
+  updateProperty = fnObject.updateProperty
+
+  addProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
+  addProperty = fnObject.addProperty
 
 propToStrKey ∷ ∀ i. Prop i → String
 propToStrKey = case _ of
@@ -196,12 +203,6 @@ propToStrKey = case _ of
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
   BHandler ty _ -> "bhandler/" <> ty
-
-addProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
-addProperty = Util.addProperty
-
-updateProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
-updateProperty = Util.updateProperty
 
 setProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
 setProperty = Util.unsafeSetProp

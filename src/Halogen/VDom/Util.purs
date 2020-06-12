@@ -29,17 +29,15 @@ module Halogen.VDom.Util
   , removeAttribute
   , addEventListener
   , removeEventListener
-  , addProperty
-  , updateProperty
   , removeProperty
   , JsUndefined
   , jsUndefined
-  , cancelBehavior
   ) where
 
 import Prelude
 
 import Data.Function.Uncurried as Fn
+import Data.Maybe (Maybe)
 import Data.Nullable (Nullable)
 import Effect (Effect)
 import Effect.Uncurried as EFn
@@ -47,7 +45,7 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (Namespace, ElemName)
+import Halogen.VDom.Types (ElemName, Namespace, FnObject)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
@@ -77,12 +75,6 @@ foreign import unsafeGetAny
 
 foreign import unsafeHasAny
   ∷ ∀ a. Fn.Fn2 String a Boolean
-
-foreign import addProperty
-  ∷ ∀ a b. EFn.EffectFn3 String a b Unit
-
-foreign import updateProperty
-  ∷ ∀ a b. EFn.EffectFn3 String a b Unit
 
 foreign import unsafeSetProp
   ∷ ∀ a b. EFn.EffectFn3 String a b Unit
@@ -146,7 +138,8 @@ foreign import diffWithKeyAndIxE
 
 foreign import diffPropWithKeyAndIxE
   ∷ ∀ a b c d el
-  . EFn.EffectFn7
+  . EFn.EffectFn8
+      FnObject
       (Object.Object a)
       (Array b)
       (b → String)
@@ -168,19 +161,19 @@ foreign import refEq
   ∷ ∀ a b. Fn.Fn2 a b Boolean
 
 foreign import createTextNode
-  ∷ EFn.EffectFn2 String DOM.Document DOM.Node
+  ∷ EFn.EffectFn1 String  DOM.Node
 
 foreign import setTextContent
   ∷ EFn.EffectFn2 String DOM.Node Unit
 
 foreign import createElement
-  ∷ EFn.EffectFn3 (Nullable Namespace) ElemName DOM.Document DOM.Element
+  ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
 
 foreign import insertChildIx
-  ∷ EFn.EffectFn4 String Int DOM.Node DOM.Node Unit
+  ∷ EFn.EffectFn5 FnObject String Int DOM.Node DOM.Node Unit
 
 foreign import removeChild
-  ∷ EFn.EffectFn2 DOM.Node DOM.Node Unit
+  ∷ EFn.EffectFn3 FnObject DOM.Node DOM.Node Unit
 
 foreign import parentNode
   ∷ EFn.EffectFn1 DOM.Node DOM.Node
@@ -192,7 +185,7 @@ foreign import removeAttribute
   ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Unit
 
 foreign import addEventListener
-  ∷ EFn.EffectFn4 String String DOM.EventListener DOM.Element Unit
+  ∷ EFn.EffectFn5 FnObject String String DOM.EventListener DOM.Element Unit
 
 foreign import removeEventListener
   ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
@@ -201,4 +194,3 @@ foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
 
-foreign import cancelBehavior :: String -> Effect Unit
