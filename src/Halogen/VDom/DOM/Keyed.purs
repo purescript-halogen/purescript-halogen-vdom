@@ -40,7 +40,7 @@ hydrateKeyed
     (Array (Tuple String (VDom a w)))
     a
     w
-hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do
+hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do -- TODO: normalizeChildren
   checkIsElementNode currentElement
   checkTagNameIsEqualTo ns1 name1 currentElement
   checkChildrenLengthIsEqualTo (Array.length keyedChildren) currentElement
@@ -51,7 +51,7 @@ hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1
   (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
 
   let
-    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- TODO
+    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- HACK: not all DOM.Node's are DOM.Element's
 
     onChild :: EFn.EffectFn3 String Int ({ element ∷ DOM.Element, keyedChild ∷ Tuple String (VDom a w) }) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn3 \k ix ({ element, keyedChild: Tuple _ child }) → do

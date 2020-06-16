@@ -1,11 +1,11 @@
 module Halogen.VDom.DOM.Elem where
 
+import Prelude
+
 import Data.Tuple.Nested (type (/\), (/\))
 import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
 import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
-import Prelude
-
-import Data.Array (length, zip) as Array
+import Data.Array (length, zip, fromFoldable) as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe)
 import Data.Nullable (toNullable)
@@ -13,6 +13,7 @@ import Effect.Uncurried as EFn
 import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
 import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
 import Halogen.VDom.Util as Util
+import Halogen.VDom.DOM.Util as DOMUtil
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
@@ -38,9 +39,12 @@ hydrateElem
     a
     w
 hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
+  let
+    normalizedChildren = DOMUtil.normalizeChildren ch1
+
   checkIsElementNode currentElement
   checkTagNameIsEqualTo ns1 name1 currentElement
-  checkChildrenLengthIsEqualTo (Array.length ch1) currentElement
+  checkChildrenLengthIsEqualTo (Array.length normalizedChildren) currentElement
   let
     currentNode :: DOM.Node
     currentNode = DOM.Element.toNode currentElement
@@ -52,7 +56,7 @@ hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 
 
     onChild :: EFn.EffectFn2 Int (DOM.Element /\ (VDom a w)) (Step (VDom a w) DOM.Node)
     onChild = EFn.mkEffectFn2 \ix (element /\ child) -> EFn.runEffectFn1 (hydrate element) child
-  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren' ch1) onChild
+  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren' normalizedChildren) onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
     state =
