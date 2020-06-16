@@ -1,8 +1,8 @@
 module Halogen.VDom.DOM.Checkers where
 
-import Prelude (Unit, bind, discard, show, when, ($), (/=), (<>))
+import Prelude
 
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.String (toUpper)
 import Effect (Effect)
 import Effect.Exception (error, throwException)
@@ -12,44 +12,43 @@ import Halogen.VDom.Util (fullAttributeName, quote, warnAny)
 import Partial.Unsafe (unsafePartial)
 import Web.DOM (NodeList, NodeType) as DOM
 import Web.DOM.Element (Element, tagName) as DOM
+import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
-import Web.DOM.Node (childNodes, nodeType, textContent) as DOM
+import Web.DOM.Node (childNodes, nodeType) as DOM.Node
+import Web.DOM.Node (Node) as DOM
 import Web.DOM.NodeList (length) as DOM.NodeList
 import Web.DOM.NodeType as DOM.NodeType
+import Web.DOM.Text as DOM.Text
+import Web.DOM.Text (Text) as DOM
 
 --------------------------------------
 -- Text
 
+checkIsTextNode :: DOM.Node -> Effect DOM.Text
+checkIsTextNode node =
+  case DOM.Text.fromNode node of
+    Just text -> pure text
+    Nothing -> do
+      EFn.runEffectFn2 warnAny "Error at " { node }
+      throwException $ error $ "Expected node to be a " <> show DOM.NodeType.TextNode <> ", but got " <> show (unsafePartial (DOM.Node.nodeType node))
 
-checkElementIsNodeType :: DOM.NodeType -> DOM.Element -> Effect Unit
-checkElementIsNodeType = checkElementIsNodeType'
-  where
-    getElementNodeType :: DOM.Element -> DOM.NodeType
-    getElementNodeType element = unsafePartial $ DOM.nodeType (DOM.Element.toNode element)
-
-    checkElementIsNodeType' :: DOM.NodeType -> DOM.Element -> Effect Unit
-    checkElementIsNodeType' expectedNodeType element = do
-      let nodeType = getElementNodeType element
-      EFn.runEffectFn2 warnAny "checkElementIsNodeType" { nodeType, expectedNodeType, meta: { element } }
-      when (nodeType /= expectedNodeType) (do
-        EFn.runEffectFn2 warnAny "Error at " { element }
-        throwException $ error $ "Expected element to be a " <> show expectedNodeType <> ", but got " <> show nodeType)
-
-checkIsTextNode :: DOM.Element -> Effect Unit
-checkIsTextNode = checkElementIsNodeType DOM.NodeType.TextNode
-
-checkTextContentIsEqTo :: String -> DOM.Element -> Effect Unit
-checkTextContentIsEqTo expectedText element = do
-  textContent <- DOM.textContent (DOM.Element.toNode element)
-  EFn.runEffectFn2 warnAny "checkTextContentIsEqTo" { textContent, expectedText, meta: { element } }
+checkTextContentIsEqTo :: String -> DOM.Text -> Effect Unit
+checkTextContentIsEqTo expectedText text = do
+  textContent <- DOM.Text.wholeText text
+  EFn.runEffectFn2 warnAny "checkTextContentIsEqTo" { textContent, expectedText, meta: { text } }
   when (textContent /= expectedText) (do
     throwException $ error $ "Expected element text content to equal to " <> quote expectedText <> ", but got " <> quote textContent)
 
 --------------------------------------
 -- Elem
 
-checkIsElementNode :: DOM.Element -> Effect Unit
-checkIsElementNode = checkElementIsNodeType DOM.NodeType.ElementNode
+checkIsElementNode :: DOM.Node -> Effect DOM.Element
+checkIsElementNode node =
+  case DOM.Element.fromNode node of
+    Just text -> pure text
+    Nothing -> do
+      EFn.runEffectFn2 warnAny "Error at " { node }
+      throwException $ error $ "Expected node to be a " <> show DOM.NodeType.ElementNode <> ", but got " <> show (unsafePartial (DOM.Node.nodeType node))
 
 checkTagNameIsEqualTo :: Maybe Namespace -> ElemName -> DOM.Element -> Effect Unit
 checkTagNameIsEqualTo maybeNamespace elemName element = do
@@ -57,14 +56,14 @@ checkTagNameIsEqualTo maybeNamespace elemName element = do
     -- e.g. `DIV` or `FOO:SVG`
     expectedTagName :: String
     expectedTagName = toUpper $ fullAttributeName maybeNamespace elemName
-  let tagName = DOM.tagName element
+  let tagName = DOM.Element.tagName element
   EFn.runEffectFn2 warnAny "checkTagNameIsEqualTo" { expectedTagName, tagName, meta: { maybeNamespace, elemName, element } }
   when (tagName /= expectedTagName) (do
     throwException (error $ "Expected element tagName equal to " <> show expectedTagName <> ", but got " <> show tagName))
 
 checkChildrenLengthIsEqualTo :: Int -> DOM.Element -> Effect Unit
 checkChildrenLengthIsEqualTo expectedLength element = do
-  (elementChildren :: DOM.NodeList) <- DOM.childNodes (DOM.Element.toNode element)
+  (elementChildren :: DOM.NodeList) <- DOM.Node.childNodes (DOM.Element.toNode element)
   elementChildrenLength <- DOM.NodeList.length elementChildren
   EFn.runEffectFn2 warnAny "checkChildrenLengthIsEqualTo" { elementChildrenLength, expectedLength, meta: { element, elementChildren } }
   when (elementChildrenLength /= expectedLength) do

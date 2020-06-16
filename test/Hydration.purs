@@ -11,6 +11,7 @@ import Effect.Uncurried as EFn
 import Halogen.VDom as V
 import Halogen.VDom.Finders (findElementFirstChild)
 import Web.DOM.ParentNode (ParentNode)
+import Web.DOM.Element as DOM.Element
 import Web.DOM (Element)
 import Web.DOM.ParentNode (querySelector, QuerySelector(..)) as DOM
 import Data.Maybe (maybe)
@@ -67,7 +68,7 @@ main = do
     initialValue = initialState
     render = renderData
     initialVdom = un VDom (render initialValue)
-  machine ← EFn.runEffectFn1 (V.hydrateVDom spec rootElement) initialVdom
+  machine ← EFn.runEffectFn1 (V.hydrateVDom spec (DOM.Element.toNode rootElement)) initialVdom
 
   listener ← DOM.eventListener \_ev →
     void $ EFn.runEffectFn2 V.step machine (un VDom (render state2))

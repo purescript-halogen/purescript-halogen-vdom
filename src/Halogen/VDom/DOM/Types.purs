@@ -19,9 +19,9 @@ type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomS
 
 type VDomHydrator i a w
   = EFn.EffectFn5
-  DOM.Element -- current element
+  DOM.Node -- current element
   (VDomSpec a w)
-  (DOM.Element -> VDomMachine a w) -- top hydrate function
+  (DOM.Node -> VDomMachine a w) -- top hydrate function
   (VDomMachine a w) -- top build function
   i
   (VDomStep a w)
@@ -30,9 +30,9 @@ type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i
 
 type VDomHydrator4 i j k l a w
   = EFn.EffectFn8
-  DOM.Element
+  DOM.Node
   (VDomSpec a w)
-  (DOM.Element -> VDomMachine a w)
+  (DOM.Node -> VDomMachine a w)
   (VDomMachine a w)
   i
   j
@@ -44,7 +44,7 @@ type VDomHydrator4 i j k l a w
 -- | enable recursive trees of Widgets.
 newtype VDomSpec a w = VDomSpec
   { buildWidget ∷ VDomSpec a w → Machine w DOM.Node -- `buildWidget` takes a circular reference to the `VDomSpec`
-  , hydrateWidget ∷ VDomSpec a w → DOM.Element → Machine w DOM.Node
+  , hydrateWidget ∷ VDomSpec a w → DOM.Node → Machine w DOM.Node
 
   , buildAttributes ∷ DOM.Element → Machine a Unit
   , hydrateAttributes ∷ DOM.Element → Machine a Unit

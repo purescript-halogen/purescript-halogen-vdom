@@ -40,8 +40,8 @@ hydrateKeyed
     (Array (Tuple String (VDom a w)))
     a
     w
-hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do -- TODO: normalizeChildren
-  checkIsElementNode currentElement
+hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do -- TODO: normalizeChildren
+  currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
   checkChildrenLengthIsEqualTo (Array.length keyedChildren) currentElement
   let
@@ -51,16 +51,14 @@ hydrateKeyed = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1
   (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
 
   let
-    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- HACK: not all DOM.Node's are DOM.Element's
-
-    onChild :: EFn.EffectFn3 String Int ({ element ∷ DOM.Element, keyedChild ∷ Tuple String (VDom a w) }) (Step (VDom a w) DOM.Node)
-    onChild = EFn.mkEffectFn3 \k ix ({ element, keyedChild: Tuple _ child }) → do
-      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
+    onChild :: EFn.EffectFn3 String Int ({ node ∷ DOM.Node, keyedChild ∷ Tuple String (VDom a w) }) (Step (VDom a w) DOM.Node)
+    onChild = EFn.mkEffectFn3 \k ix ({ node, keyedChild: Tuple _ child }) → do
+      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate node) child
       pure res
   (children :: Object.Object (Step (VDom a w) DOM.Node)) ←
     EFn.runEffectFn3
     Util.strMapWithIxE
-    (Array.zipWith (\element keyedChild → { element, keyedChild }) currentElementChildren' keyedChildren)
+    (Array.zipWith (\node keyedChild → { node, keyedChild }) currentElementChildren keyedChildren)
     (\{ keyedChild } → fst keyedChild)
     onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1

@@ -38,25 +38,20 @@ hydrateElem
     (Array (VDom a w))
     a
     w
-hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
+hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
   let
     normalizedChildren = DOMUtil.normalizeChildren ch1
 
-  checkIsElementNode currentElement
+  currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
   checkChildrenLengthIsEqualTo (Array.length normalizedChildren) currentElement
-  let
-    currentNode :: DOM.Node
-    currentNode = DOM.Element.toNode currentElement
 
   (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
 
   let
-    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- HACK: not all DOM.Node's are DOM.Element's
-
-    onChild :: EFn.EffectFn2 Int (DOM.Element /\ (VDom a w)) (Step (VDom a w) DOM.Node)
-    onChild = EFn.mkEffectFn2 \ix (element /\ child) -> EFn.runEffectFn1 (hydrate element) child
-  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren' normalizedChildren) onChild
+    onChild :: EFn.EffectFn2 Int (DOM.Node /\ (VDom a w)) (Step (VDom a w) DOM.Node)
+    onChild = EFn.mkEffectFn2 \ix (node /\ child) -> EFn.runEffectFn1 (hydrate node) child
+  (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren normalizedChildren) onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
     state =

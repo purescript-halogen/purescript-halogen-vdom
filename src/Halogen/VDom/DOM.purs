@@ -20,8 +20,9 @@ import Halogen.VDom.DOM.Types (VDomSpec(..)) as Export
 import Halogen.VDom.DOM.Widget (buildWidget) as Export
 import Halogen.VDom.Types (VDom(..), runGraft)
 import Web.DOM.Element (Element) as DOM
+import Web.DOM.Node (Node) as DOM
 
-hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Element -> VDomMachine a w
+hydrateVDom ∷ ∀ a w. VDomSpec a w → DOM.Node -> VDomMachine a w
 hydrateVDom spec rootNode = hydrate rootNode
   where
   build = buildVDom spec
