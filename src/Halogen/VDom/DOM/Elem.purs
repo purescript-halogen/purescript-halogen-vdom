@@ -48,12 +48,10 @@ hydrateElem = EFn.mkEffectFn8 \currentElement (VDomSpec spec) hydrate build ns1 
   (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
 
   let
-    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- TODO
+    (currentElementChildren' :: Array DOM.Element) = unsafeCoerce currentElementChildren -- HACK: not all DOM.Node's are DOM.Element's
 
     onChild :: EFn.EffectFn2 Int (DOM.Element /\ (VDom a w)) (Step (VDom a w) DOM.Node)
-    onChild = EFn.mkEffectFn2 \ix (element /\ child) → do
-      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate element) child
-      pure res
+    onChild = EFn.mkEffectFn2 \ix (element /\ child) -> EFn.runEffectFn1 (hydrate element) child
   (children :: Array (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn2 Util.forE (Array.zip currentElementChildren' ch1) onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
