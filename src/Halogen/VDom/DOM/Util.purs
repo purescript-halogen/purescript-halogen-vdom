@@ -15,5 +15,5 @@ normalizeChildren = Array.fromFoldable <<< List.foldr go Nil <<< List.fromFoldab
   where
     go :: VDom a w -> List (VDom a w) -> List (VDom a w)
     go (Text "") accum = accum
-    go (Text text2) (Text text1 : accumt) = Text (text1 <> text2) : accumt
+    go (Text text1) (Text text2 : accumt) = Text (text1 <> text2) : accumt
     go vdom accum = vdom : accum
