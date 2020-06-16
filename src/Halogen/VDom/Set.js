@@ -14,7 +14,7 @@ exports.size = function(set) {
   return set.size
 }
 
-exports.has = function(value) {
+exports.has = function(value, set) {
   return set.has(value)
 }
 

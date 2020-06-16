@@ -18,7 +18,7 @@ import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListe
 import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
-import Halogen.VDom.Util (STObject', fullAttributeName, quote)
+import Halogen.VDom.Util (STObject', anyToString, fullAttributeName, quote)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 import Web.Event.Event (EventType(..), Event) as DOM
@@ -47,13 +47,24 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
       EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
       pure v
     Property propName val → do
-      checkPropExistsAndIsEqual propName val el
-
       -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual" { propName, val, el, extraAttributeNames }
 
-      if propName == "className"
-        then EFn.runEffectFn2 deleteRequiredElement "class" extraAttributeNames
-        else do
+      case propName of
+        "className" -> do
+          checkPropExistsAndIsEqual propName val el
+          EFn.runEffectFn2 deleteRequiredElement "class" extraAttributeNames
+        "href" -> do
+          -- | becuase on <a href="/foo"></a>
+          -- |   $0.href is eq to "http://localhost:3000/foo"
+          -- |   but
+          -- |   $0.attributes.href.value is eq to "/foo"
+          -- |   $0.getAttribute("href") is eq to "/foo"
+
+          -- | TODO: check it's on the <a> element
+          checkAttributeExistsAndIsEqual Nothing "href" (anyToString val) el
+          EFn.runEffectFn2 deleteRequiredElement "href" extraAttributeNames
+        _ -> do
+          checkPropExistsAndIsEqual propName val el
           let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
           EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
 
