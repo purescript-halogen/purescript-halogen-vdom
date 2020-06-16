@@ -5,19 +5,20 @@ module Halogen.VDom.DOM.Prop
   ) where
 
 import Prelude
+
 import Halogen.VDom.DOM.Prop.Implementation (applyProp, diffProp, hydrateApplyProp, mbEmit, removeProp)
 import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropState, BuildPropFunction)
-import Halogen.VDom.DOM.Prop.Utils (propToStrKey)
+import Halogen.VDom.DOM.Prop.Util (propToStrKey)
 import Halogen.VDom.Util (STObject')
-
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
-import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
 import Halogen.VDom.Machine (Step, Step'(..), mkStep)
 import Halogen.VDom.Util as Util
 import Halogen.VDom.DOM.Prop.Checkers (mkExtraAttributeNames, checkExtraAttributeNamesIsEmpty)
+
+import Halogen.VDom.DOM.Prop.Types (Prop(..), ElemRef(..), PropValue, propFromString, propFromBoolean, propFromInt, propFromNumber) as Export
 
 hydrateProp
   ∷ ∀ a

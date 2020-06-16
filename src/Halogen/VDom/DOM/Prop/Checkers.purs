@@ -12,7 +12,7 @@ import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (PropValue)
-import Halogen.VDom.DOM.Prop.Utils (unsafeGetProperty)
+import Halogen.VDom.DOM.Prop.Util (unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..), Namespace)
 import Halogen.VDom.Util (anyToString, fullAttributeName, quote, warnAny)

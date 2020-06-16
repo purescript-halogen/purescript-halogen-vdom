@@ -1,4 +1,4 @@
-module Halogen.VDom.DOM.Prop.Utils where
+module Halogen.VDom.DOM.Prop.Util where
 
 import Prelude (Unit, (<>), (>>=))
 

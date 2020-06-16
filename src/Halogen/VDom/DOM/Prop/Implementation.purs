@@ -15,7 +15,7 @@ import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkPropExistsAndIsEqual)
 import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropValue)
-import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
+import Halogen.VDom.DOM.Prop.Util (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
 import Halogen.VDom.Util (STObject', anyToString, fullAttributeName, quote)
