@@ -14,7 +14,7 @@ import Effect.Ref as Ref
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkPropExistsAndIsEqual)
-import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..))
+import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropValue)
 import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
@@ -23,6 +23,8 @@ import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 import Web.Event.Event (EventType(..), Event) as DOM
 import Web.Event.EventTarget (eventListener, EventListener) as DOM
+import Foreign (unsafeToForeign, typeOf)
+import Unsafe.Coerce (unsafeCoerce)
 
 deleteRequiredElement :: EFn.EffectFn2 String (Set.Set String) Unit
 deleteRequiredElement = EFn.mkEffectFn2 \element set -> do
@@ -66,7 +68,21 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
         _ -> do
           checkPropExistsAndIsEqual propName val el
           let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
-          EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
+          case typeOf (unsafeToForeign val), (unsafeCoerce :: PropValue -> Boolean) val of
+            -- | if this is a boolean and is false - then it should not have been prerendered
+            -- |
+            -- | For example:
+            -- | `HH.button [HP.disabled false] []` should be rendered as `<button></button>`
+            -- | `HH.button [HP.disabled true] []` should be rendered as `<button disabled></button>`
+            -- |
+            -- | Why it should NOT be rendered at all? Because
+            -- |   `<button disabled></button>`         the `$0.disabled === true`
+            -- |   `<button disabled="false"></button>` the `$0.disabled === true`
+            -- |   `<button disabled="true"></button>`  the `$0.disabled === true`
+            -- |   `<button disabled=""></button>`      the `$0.disabled === true`
+            -- |   `<button></button>`                  the `$0.disabled === false`
+            "boolean", false -> pure unit
+            _, _ -> EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
 
       -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual after" { propName, val, el, extraAttributeNames }
 
