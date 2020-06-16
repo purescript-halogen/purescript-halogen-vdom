@@ -14,6 +14,10 @@ exports.size = function(set) {
   return set.size
 }
 
+exports.has = function(value) {
+  return set.has(value)
+}
+
 exports.toArray = function(set) {
   return Array.from(set)
 }

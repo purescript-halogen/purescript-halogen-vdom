@@ -1,11 +1,15 @@
 module Halogen.VDom.DOM.Prop.Implementation where
 
+import Prelude
+
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
+import Data.String (joinWith)
 import Data.String.Common (toLower)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
+import Effect.Exception (error, throwException)
 import Effect.Ref as Ref
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
@@ -14,12 +18,18 @@ import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListe
 import Halogen.VDom.DOM.Prop.Utils (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..))
-import Halogen.VDom.Util (STObject', fullAttributeName)
+import Halogen.VDom.Util (STObject', fullAttributeName, quote)
 import Halogen.VDom.Util as Util
-import Prelude (Unit, bind, discard, pure, unit, (==))
 import Web.DOM.Element (Element) as DOM
 import Web.Event.Event (EventType(..), Event) as DOM
 import Web.Event.EventTarget (eventListener, EventListener) as DOM
+
+deleteRequiredElement :: EFn.EffectFn2 String (Set.Set String) Unit
+deleteRequiredElement = EFn.mkEffectFn2 \element set -> do
+  let isPresent = Fn.runFn2 Set.has element set
+  if isPresent
+    then EFn.runEffectFn2 Set.delete element set
+    else throwException $ error $ "Cannot delete element that is not present in set, " <> quote element <> " should be present in set" <> (Set.toArray set # joinWith ", ")
 
 hydrateApplyProp
   ∷ ∀ a
@@ -34,7 +44,7 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
     Attribute maybeNamespace attributeName val → do
       checkAttributeExistsAndIsEqual maybeNamespace attributeName val el
       let fullAttributeName' = fullAttributeName maybeNamespace (ElemName attributeName) -- should be lowercased
-      EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
+      EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
       pure v
     Property propName val → do
       checkPropExistsAndIsEqual propName val el
@@ -42,10 +52,10 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
       -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual" { propName, val, el, extraAttributeNames }
 
       if propName == "className"
-        then EFn.runEffectFn2 Set.delete "class" extraAttributeNames
+        then EFn.runEffectFn2 deleteRequiredElement "class" extraAttributeNames
         else do
           let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
-          EFn.runEffectFn2 Set.delete fullAttributeName' extraAttributeNames
+          EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
 
       -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual after" { propName, val, el, extraAttributeNames }
 
