@@ -53,74 +53,77 @@ listToElementOrTextNode = map toElementOrTextNode >>> List.catMaybes
 -- | 5. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(-100) -> throws "Uncaught DOMException: Failed to execute 'splitText' on 'Text': The offset 4294966996 is larger than the Text node's length."
 zipChildrenAndSplitTextNodes
   :: forall a w vdomContainer output
-   . (ElementOrTextNode -> vdomContainer -> output)
-  -> (vdomContainer -> VDom a w)
-  -> VDomSpec a w
-  -> DOM.Node
-  -> List ElementOrTextNode
-  -> List vdomContainer
-  -> Effect (List output)
-zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildren (vdomChild : vdomChildrenTail) =
-  let vdomChild' = extractVdom vdomChild
-  in case domChildren, vdomChild' of
-    _, Text "" -> do
-      EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 1" { parent, domChildren, vdomChildrenTail }
+   . EFn.EffectFn6
+    (ElementOrTextNode -> vdomContainer -> output)
+    (vdomContainer -> VDom a w)
+    (VDomSpec a w)
+    DOM.Node
+    (List ElementOrTextNode)
+    (List vdomContainer)
+    (List output)
+zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec spec) parent domChildren vdomChildren ->
+  case domChildren, vdomChildren of
+    _, (vdomChild : vdomChildrenTail) ->
+      let vdomChild' = extractVdom vdomChild
+      in case domChildren, vdomChild' of
+        _, Text "" -> do
+          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 1" { parent, domChildren, vdomChildrenTail }
 
-      (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" spec.document
+          (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" spec.document
 
-      case domChildren of
-        -- | when DOM is `<div></div>` (no children) and vdom is `HH.div_ [HH.text ""]` - it will create append new text node
-        Nil -> void $ DOM.Node.appendChild (DOM.Text.toNode newChildWithEmptyText) parent
-        -- | when DOM is `<div>foo</div>` and vdom is `HH.div_ [HH.text "foo", HH.text ""]` - it wont touch the "foo", but should append new text node "" after "foo"
-        (referenceNode : _) -> do
-          let (referenceNode' :: DOM.Node) = elementOrTextNodeToNode referenceNode
-          void $ DOM.Node.insertBefore (DOM.Text.toNode newChildWithEmptyText) referenceNode' parent
+          case domChildren of
+            -- | when DOM is `<div></div>` (no children) and vdom is `HH.div_ [HH.text ""]` - it will create append new text node
+            Nil -> void $ DOM.Node.appendChild (DOM.Text.toNode newChildWithEmptyText) parent
+            -- | when DOM is `<div>foo</div>` and vdom is `HH.div_ [HH.text "foo", HH.text ""]` - it wont touch the "foo", but should append new text node "" after "foo"
+            (referenceNode : _) -> do
+              let (referenceNode' :: DOM.Node) = elementOrTextNodeToNode referenceNode
+              void $ DOM.Node.insertBefore (DOM.Text.toNode newChildWithEmptyText) referenceNode' parent
 
-      let (head :: output) = toOutput (TextNode newChildWithEmptyText) vdomChild
+          let (head :: output) = toOutput (TextNode newChildWithEmptyText) vdomChild
 
-      (tailResult :: List output) <- zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildren vdomChildrenTail
+          (tailResult :: List output) <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildren vdomChildrenTail
 
-      pure (head : tailResult)
-    (TextNode textNode : domChildrenTail), (Text expectedText) -> do
-       EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2" { parent, textNode, domChildrenTail, expectedText, vdomChildrenTail }
-       textNodeLength <- DOM.CharacterData.length (DOM.Text.toCharacterData textNode)
+          pure (head : tailResult)
+        (TextNode textNode : domChildrenTail), (Text expectedText) -> do
+          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2" { parent, textNode, domChildrenTail, expectedText, vdomChildrenTail }
+          textNodeLength <- DOM.CharacterData.length (DOM.Text.toCharacterData textNode)
 
-       let expectedTextLength = String.length expectedText
+          let expectedTextLength = String.length expectedText
 
-       case compare textNodeLength expectedTextLength of
-         LT -> do
-           textNodeData <- DOM.CharacterData.data_ (DOM.Text.toCharacterData textNode)
-           EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 LT" { }
-           throwException $ error $ "should not smaller then expected " <> textNodeData -- TODO: better errors
+          case compare textNodeLength expectedTextLength of
+            LT -> do
+              textNodeData <- DOM.CharacterData.data_ (DOM.Text.toCharacterData textNode)
+              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 LT" { }
+              throwException $ error $ "should not smaller then expected " <> textNodeData -- TODO: better errors
 
-         -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobar"]` - it should just hydrate
-         EQ -> do
-           EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 EQ" { }
+            -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobar"]` - it should just hydrate
+            EQ -> do
+              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 EQ" { }
 
-           let (head :: output) = toOutput (TextNode textNode) vdomChild
+              let (head :: output) = toOutput (TextNode textNode) vdomChild
 
-           tailResult <- zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
 
-           pure (head : tailResult)
+              pure (head : tailResult)
 
-         -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foo", HH.text "bar"]` - it should split "foobar" on "foo" and "bar"
-         GT -> do
-           EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 GT" { }
-           nextTextNode <- DOM.Text.splitText expectedTextLength textNode -- this is our "bar", and textNode is now our "foo" (but was - "foobar")
+            -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foo", HH.text "bar"]` - it should split "foobar" on "foo" and "bar"
+            GT -> do
+              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 GT" { }
+              nextTextNode <- DOM.Text.splitText expectedTextLength textNode -- this is our "bar", and textNode is now our "foo" (but was - "foobar")
 
-           let (head :: output) = toOutput (TextNode textNode) vdomChild
+              let (head :: output) = toOutput (TextNode textNode) vdomChild
 
-           tailResult <- zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
 
-           pure (head : tailResult)
-    (domChild : domChildrenTail), _ -> do
-      EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 3" {}
+              pure (head : tailResult)
+        (domChild : domChildrenTail), _ -> do
+          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 3" {}
 
-      let (head :: output) = toOutput domChild vdomChild
+          let (head :: output) = toOutput domChild vdomChild
 
-      tailResult <- zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
+          tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
 
-      pure (head : tailResult)
+          pure (head : tailResult)
+        _, _ -> throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"
+    Nil, Nil -> pure Nil
     _, _ -> throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"
-zipChildrenAndSplitTextNodes toOutput extractVdom spec parent Nil Nil = pure Nil
-zipChildrenAndSplitTextNodes toOutput extractVdom spec parent otherDomChildren otherVdomChildren = throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"

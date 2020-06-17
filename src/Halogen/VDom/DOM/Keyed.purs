@@ -52,6 +52,7 @@ hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 na
   let (currentElementChildren' :: List DOMUtil.ElementOrTextNode) = DOMUtil.listToElementOrTextNode currentElementChildren
 
   (zippedChildren :: List { node :: DOM.Node, vdom :: VDom a w, key :: String }) <-
+    EFn.runEffectFn6
     DOMUtil.zipChildrenAndSplitTextNodes
     (\(node :: DOMUtil.ElementOrTextNode) (Tuple key vdom) -> { node: DOMUtil.elementOrTextNodeToNode node, vdom, key })
     snd
