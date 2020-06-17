@@ -39,79 +39,6 @@ type ElemState a w =
   , children ∷ Array (VDomStep a w)
   }
 
-data ElementOrTextNode = ElementNode DOM.Element | TextNode DOM.Text
-
-elementOrTextNodeToNode :: ElementOrTextNode -> DOM.Node
-elementOrTextNodeToNode referenceNode =
-  case referenceNode of
-    ElementNode element -> DOM.Element.toNode element
-    TextNode text -> DOM.Text.toNode text
-
--- | The idea is to prevent rerendering on the next render
--- | but because in the prerendered html all text nodes are merged (`HH.div_ [ HH.text "foo", HH.text "bar" ]` rendered as `<div>foobar</div>`, not `<div>"foo""bar"</div>`)
--- | and empty text nodes "" are hidden (i.e. they exist in $0.childNodes, but not rendered),
--- | we need to split text nodes using .splitText() and insert "" nodes where it is needed
--- |
--- | check https://jsbin.com/bukulicito/edit?html,output to see how text nodes are added to the parent
--- |
--- | How textNode.splitText() works:
--- | 1. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(0) -> returns "foobar", does nothing
--- | 2. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(3) -> splits on "foo" and "bar", returns "bar"
--- | 3. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(6) -> adds new node "" after "foobar", returns ""
--- | 4. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(100) -> throws "Uncaught DOMException: Failed to execute 'splitText' on 'Text': The offset 100 is larger than the Text node's length."
--- | 5. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(-100) -> throws "Uncaught DOMException: Failed to execute 'splitText' on 'Text': The offset 4294966996 is larger than the Text node's length."
-zipChildrenAndSplitTextNodes :: forall a w . VDomSpec a w -> DOM.Node -> List ElementOrTextNode -> List (VDom a w) -> Effect (List { node :: ElementOrTextNode, vdom :: VDom a w })
-zipChildrenAndSplitTextNodes (VDomSpec spec) parent domChildren ((Text "") : vdomChildrenTail) = do
-  -- | when DOM is `<div>foo</div>` and vdom is `HH.div_ [HH.text "foo", HH.text ""]` - it wont touch the "foo", but should append new text node "" after "foo"
-  -- | when DOM is `<div></div>` (no children) and vdom is `HH.div_ [HH.text ""]` - it will create append new text node
-  EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 1" { parent, domChildren, vdomChildrenTail }
-
-  (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" spec.document
-
-  case domChildren of
-    Nil -> void $ DOM.Node.appendChild (DOM.Text.toNode newChildWithEmptyText) parent
-    (referenceNode : _) -> do
-      let (referenceNode' :: DOM.Node) = elementOrTextNodeToNode referenceNode
-      void $ DOM.Node.insertBefore (DOM.Text.toNode newChildWithEmptyText) referenceNode' parent
-
-  tailResult <- zipChildrenAndSplitTextNodes (VDomSpec spec) parent domChildren vdomChildrenTail
-  pure ({ node: TextNode newChildWithEmptyText, vdom: Text "" } : tailResult)
-zipChildrenAndSplitTextNodes (VDomSpec spec) parent (TextNode textNode : domChildrenTail) ((Text expectedText) : vdomChildrenTail) = do
-  EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2" { parent, textNode, domChildrenTail, expectedText, vdomChildrenTail }
-  textNodeLength <- DOM.CharacterData.length (DOM.Text.toCharacterData textNode)
-  let expectedTextLength = String.length expectedText
-
-  case compare textNodeLength expectedTextLength of
-    LT -> do
-      textNodeData <- DOM.CharacterData.data_ (DOM.Text.toCharacterData textNode)
-      EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 LT" { }
-      throwException $ error $ "should not smaller then expected " <> textNodeData -- TODO: better errors
-
-    -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobar"]` - it should just hydrate
-    EQ -> do
-      EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 EQ" { }
-      tailResult <- zipChildrenAndSplitTextNodes (VDomSpec spec) parent domChildrenTail vdomChildrenTail
-      pure ({ node: TextNode textNode, vdom: Text expectedText } : tailResult)
-
-    -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foo", HH.text "bar"]` - it should split "foobar" on "foo" and "bar"
-    GT -> do
-      EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 GT" { }
-      nextTextNode <- DOM.Text.splitText expectedTextLength textNode -- this is our "bar", and textNode is now our "foo" (but was - "foobar")
-      tailResult <- zipChildrenAndSplitTextNodes (VDomSpec spec) parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
-      pure ({ node: TextNode textNode, vdom: Text expectedText } : tailResult)
-zipChildrenAndSplitTextNodes spec parent (domChild : domChildrenTail) (vdomChild : vdomChildrenTail) = do
-  EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 3" {}
-  tailResult <- zipChildrenAndSplitTextNodes spec parent domChildrenTail vdomChildrenTail
-  pure ({ node: domChild, vdom: vdomChild } : tailResult)
-zipChildrenAndSplitTextNodes spec parent Nil Nil = pure Nil
-zipChildrenAndSplitTextNodes spec parent otherDomChildren otherVdomChildren = throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"
-
-toElementOrTextNode :: DOM.Node -> Maybe ElementOrTextNode
-toElementOrTextNode node = (DOM.Text.fromNode node <#> TextNode) <|> (DOM.Element.fromNode node <#> ElementNode)
-
-listToElementOrTextNode :: List DOM.Node -> List ElementOrTextNode
-listToElementOrTextNode = map toElementOrTextNode >>> List.catMaybes
-
 hydrateElem
   ∷ ∀ a w
   . VDomHydrator4
@@ -122,22 +49,26 @@ hydrateElem
     a
     w
 hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
-  -- | let
-  -- |   normalizedChildren = DOMUtil.normalizeChildren ch1
-
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
   -- | checkChildrenLengthIsEqualTo (Array.length normalizedChildren) currentElement
 
   (currentElementChildren :: List DOM.Node) <- DOM.Node.childNodes currentNode >>= DOM.NodeList.toArray <#> List.fromFoldable
 
-  let (currentElementChildren' :: List ElementOrTextNode) = listToElementOrTextNode currentElementChildren
+  let (currentElementChildren' :: List DOMUtil.ElementOrTextNode) = DOMUtil.listToElementOrTextNode currentElementChildren
 
-  (zippedChildren :: List { node :: ElementOrTextNode, vdom :: VDom a w }) <- zipChildrenAndSplitTextNodes (VDomSpec spec) currentNode currentElementChildren' (List.fromFoldable ch1)
+  (zippedChildren :: List { node :: DOM.Node, vdom :: VDom a w }) <-
+    DOMUtil.zipChildrenAndSplitTextNodes
+    (\(node :: DOMUtil.ElementOrTextNode) (vdom :: VDom a w) -> { node: DOMUtil.elementOrTextNodeToNode node, vdom })
+    identity
+    (VDomSpec spec)
+    currentNode
+    currentElementChildren'
+    (List.fromFoldable ch1)
 
   let
-    onChild :: { node :: ElementOrTextNode, vdom :: VDom a w } -> Effect (Step (VDom a w) DOM.Node)
-    onChild { node, vdom } = EFn.runEffectFn1 (hydrate (elementOrTextNodeToNode node)) vdom
+    onChild :: { node :: DOM.Node, vdom :: VDom a w } -> Effect (Step (VDom a w) DOM.Node)
+    onChild { node, vdom } = EFn.runEffectFn1 (hydrate node) vdom
   (children :: Array (Step (VDom a w) DOM.Node)) <- for zippedChildren onChild <#> Array.fromFoldable
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let

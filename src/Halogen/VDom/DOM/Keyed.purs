@@ -1,12 +1,12 @@
 module Halogen.VDom.DOM.Keyed where
 
-import Prelude (Unit, bind, discard, pure, ($), (>>=))
+import Prelude
 
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe)
 import Data.Nullable (toNullable)
-import Data.Tuple (Tuple(..), fst)
+import Data.Tuple (Tuple(..), fst, snd)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
@@ -19,7 +19,10 @@ import Web.DOM.NodeList as DOM.NodeList
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Node (Node, childNodes) as DOM
 import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
-import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
+import Halogen.VDom.DOM.Checkers (checkIsElementNode, checkTagNameIsEqualTo)
+import Data.List (List(..), (:))
+import Data.List as List
+import Halogen.VDom.DOM.Util as DOMUtil
 
 type KeyedState a w =
   { build ∷ VDomMachine a w
@@ -40,26 +43,31 @@ hydrateKeyed
     (Array (Tuple String (VDom a w)))
     a
     w
-hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do -- TODO: normalizeChildren
+hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
-  checkChildrenLengthIsEqualTo (Array.length keyedChildren) currentElement
-  let
-    currentNode :: DOM.Node
-    currentNode = DOM.Element.toNode currentElement
 
-  (currentElementChildren :: Array DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray
+  (currentElementChildren :: List DOM.Node) <- DOM.childNodes currentNode >>= DOM.NodeList.toArray <#> List.fromFoldable
+
+  let (currentElementChildren' :: List DOMUtil.ElementOrTextNode) = DOMUtil.listToElementOrTextNode currentElementChildren
+
+  (zippedChildren :: List { node :: DOM.Node, vdom :: VDom a w, key :: String }) <-
+    DOMUtil.zipChildrenAndSplitTextNodes
+    (\(node :: DOMUtil.ElementOrTextNode) (Tuple key vdom) -> { node: DOMUtil.elementOrTextNodeToNode node, vdom, key })
+    snd
+    (VDomSpec spec)
+    currentNode
+    currentElementChildren'
+    (List.fromFoldable keyedChildren)
 
   let
-    onChild :: EFn.EffectFn3 String Int ({ node ∷ DOM.Node, keyedChild ∷ Tuple String (VDom a w) }) (Step (VDom a w) DOM.Node)
-    onChild = EFn.mkEffectFn3 \k ix ({ node, keyedChild: Tuple _ child }) → do
-      (res :: Step (VDom a w) DOM.Node) ← EFn.runEffectFn1 (hydrate node) child
-      pure res
+    onChild :: EFn.EffectFn3 String Int ({ node :: DOM.Node, vdom :: VDom a w, key :: String }) (Step (VDom a w) DOM.Node)
+    onChild = EFn.mkEffectFn3 \k ix ({ node, vdom }) → EFn.runEffectFn1 (hydrate node) vdom
   (children :: Object.Object (Step (VDom a w) DOM.Node)) ←
     EFn.runEffectFn3
     Util.strMapWithIxE
-    (Array.zipWith (\node keyedChild → { node, keyedChild }) currentElementChildren keyedChildren)
-    (\{ keyedChild } → fst keyedChild)
+    (Array.fromFoldable zippedChildren)
+    (\{ key } → key)
     onChild
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.hydrateAttributes currentElement) as1
   let
