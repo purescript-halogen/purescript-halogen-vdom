@@ -15,7 +15,6 @@ import Halogen.VDom.DOM.Prop.Types (PropValue)
 import Halogen.VDom.DOM.Prop.Util (unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (ElemName(..), Namespace)
-import Halogen.VDom.Util (anyToString, fullAttributeName, quote, warnAny)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 
@@ -24,20 +23,20 @@ checkAttributeExistsAndIsEqual maybeNamespace attributeName expectedElementValue
   elementValue ← (EFn.runEffectFn3 Util.getAttribute (toNullable maybeNamespace) attributeName element) <#> toMaybe
   case elementValue of
     Nothing → do
-      EFn.runEffectFn2 warnAny "checkAttributeExistsAndIsEqual -> missing" { element }
-      throwException $ error $ "Expected element to have an attribute " <> quote (fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> quote expectedElementValue <> ", but it is missing"
+      EFn.runEffectFn2 Util.warnAny "checkAttributeExistsAndIsEqual -> missing" { element }
+      throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> Util.quote expectedElementValue <> ", but it is missing"
     Just elementValue' → do
-      EFn.runEffectFn2 warnAny "checkAttributeExistsAndIsEqual -> not missing" { elementValue', expectedElementValue, meta: { maybeNamespace, attributeName, expectedElementValue, element } }
+      EFn.runEffectFn2 Util.warnAny "checkAttributeExistsAndIsEqual -> not missing" { elementValue', expectedElementValue, meta: { maybeNamespace, attributeName, expectedElementValue, element } }
       unless (elementValue' == expectedElementValue) (do
-        throwException $ error $ "Expected element to have an attribute " <> quote (fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> quote expectedElementValue <> ", but it was equal to " <> quote elementValue'
+        throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> Util.quote expectedElementValue <> ", but it was equal to " <> Util.quote elementValue'
         )
 
 checkPropExistsAndIsEqual ∷ String → PropValue → DOM.Element → Effect Unit
 checkPropExistsAndIsEqual propName expectedPropValue element = do
   let propValue = Fn.runFn2 unsafeGetProperty propName element
-  EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual" { propValue, expectedPropValue, meta: { element, propName } }
+  EFn.runEffectFn2 Util.warnAny "checkPropExistsAndIsEqual" { propValue, expectedPropValue, meta: { element, propName } }
   unless (Fn.runFn2 Util.refEq propValue expectedPropValue) (do
-    throwException $ error $ "Expected element to have a prop " <> quote propName <> " eq to " <> quote (anyToString expectedPropValue) <> ", but it was equal to " <> quote (anyToString propValue)
+    throwException $ error $ "Expected element to have a prop " <> Util.quote propName <> " eq to " <> Util.quote (Util.anyToString expectedPropValue) <> ", but it was equal to " <> Util.quote (Util.anyToString propValue)
     )
 
 -- | Inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
@@ -51,7 +50,7 @@ mkExtraAttributeNames el = do
 
 checkExtraAttributeNamesIsEmpty ∷ Set.Set String -> DOM.Element -> Effect Unit
 checkExtraAttributeNamesIsEmpty extraAttributeNames element = do
-  EFn.runEffectFn2 warnAny "checkExtraAttributeNamesIsEmpty" { extraAttributeNames, meta: { element } }
+  EFn.runEffectFn2 Util.warnAny "checkExtraAttributeNamesIsEmpty" { extraAttributeNames, meta: { element } }
   when (Set.size extraAttributeNames > 0) (do
     throwException $ error $ "Extra attributes from the server: " <> (Set.toArray extraAttributeNames # joinWith ", ")
     )
