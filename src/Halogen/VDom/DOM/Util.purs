@@ -37,15 +37,15 @@ toElementOrTextNode node = (DOM.Text.fromNode node <#> TextNode) <|> (DOM.Elemen
 listToElementOrTextNode :: List DOM.Node -> List ElementOrTextNode
 listToElementOrTextNode = map toElementOrTextNode >>> List.catMaybes
 
-
--- | The idea is to prevent rerendering on the next render
--- | but because in the prerendered html all text nodes are merged (`HH.div_ [ HH.text "foo", HH.text "bar" ]` rendered as `<div>foobar</div>`, not `<div>"foo""bar"</div>`)
--- | and empty text nodes "" are hidden (i.e. they exist in $0.childNodes, but not rendered),
+-- | The idea is to prevent rerendering on the next render after hydration
+-- | but because in the prerendered html all Text nodes are merged (i.e. `HH.div_ [ HH.text "foo", HH.text "bar" ]` is rendered as `<div>foobar</div>`, not `<div>"foo""bar"</div>`)
+-- | and empty text nodes "" are hidden (i.e. they exist in $0.childNodes, but are not rendered),
 -- | we need to split text nodes using .splitText() and insert "" nodes where it is needed
 -- |
--- | check https://jsbin.com/bukulicito/edit?html,output to see how text nodes are added to the parent
+-- | Check https://jsbin.com/bukulicito/edit?html,output to see how text nodes are added to the parent
+-- | The code was tested on this example https://github.com/srghma/purescript-halogen-nextjs/tree/master/examples/text-nodes
 -- |
--- | How textNode.splitText() works:
+-- | Also, to undestand what's happening, you need to understand how textNode.splitText() works:
 -- | 1. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(0) -> returns "foobar", does nothing
 -- | 2. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(3) -> splits on "foo" and "bar", returns "bar"
 -- | 3. when $0 is '<div>foobar</div>' -> $0.childNodes[0].splitText(6) -> adds new node "" after "foobar", returns ""
