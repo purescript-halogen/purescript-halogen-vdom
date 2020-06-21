@@ -27,7 +27,7 @@ hydrateVDom spec rootNode = hydrate rootNode
   where
   build = buildVDom spec
   hydrate node = EFn.mkEffectFn1 \vdom -> do
-    EFn.runEffectFn2 warnAny "Path" { node, vdom }
+    EFn.runEffectFn2 warnAny "hydrate" { node, vdom }
     case vdom of
       Text s → EFn.runEffectFn5 hydrateText node spec hydrate build s
       Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem node spec hydrate build namespace elemName attribute childrenVdoms
@@ -47,9 +47,11 @@ hydrateVDom spec rootNode = hydrate rootNode
 buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build
   where
-  build = EFn.mkEffectFn1 case _ of
-    Text s → EFn.runEffectFn3 buildText spec build s
-    Elem namespace elemName a childrenVdoms → EFn.runEffectFn6 buildElem spec build namespace elemName a childrenVdoms
-    Keyed namespace elemName a keyedChildrenVdoms → EFn.runEffectFn6 buildKeyed spec build namespace elemName a keyedChildrenVdoms
-    Widget w → EFn.runEffectFn3 buildWidget spec build w
-    Grafted g → EFn.runEffectFn1 build (runGraft g)
+  build = EFn.mkEffectFn1 \vdom -> do
+    EFn.runEffectFn2 warnAny "build" { vdom }
+    case vdom of
+      Text s → EFn.runEffectFn3 buildText spec build s
+      Elem namespace elemName a childrenVdoms → EFn.runEffectFn6 buildElem spec build namespace elemName a childrenVdoms
+      Keyed namespace elemName a keyedChildrenVdoms → EFn.runEffectFn6 buildKeyed spec build namespace elemName a keyedChildrenVdoms
+      Widget w → EFn.runEffectFn3 buildWidget spec build w
+      Grafted g → EFn.runEffectFn1 build (runGraft g)

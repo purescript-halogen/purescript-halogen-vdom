@@ -4,25 +4,26 @@ import Prelude
 
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
+import Data.List (List(..), (:))
+import Data.List as List
 import Data.Maybe (Maybe)
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
+import Halogen.VDom.DOM.Checkers (checkIsElementNode, checkTagNameIsEqualTo)
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Util as DOMUtil
 import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
 import Halogen.VDom.Machine as Machine
 import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
+import Halogen.VDom.Util (warnAny)
 import Halogen.VDom.Util as Util
+import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOM.Element
-import Web.DOM.NodeList as DOM.NodeList
-import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Node (Node, childNodes) as DOM
-import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
-import Halogen.VDom.DOM.Checkers (checkIsElementNode, checkTagNameIsEqualTo)
-import Data.List (List(..), (:))
-import Data.List as List
-import Halogen.VDom.DOM.Util as DOMUtil
+import Web.DOM.NodeList as DOM.NodeList
 
 type KeyedState a w =
   { build ∷ VDomMachine a w
@@ -43,7 +44,8 @@ hydrateKeyed
     (Array (Tuple String (VDom a w)))
     a
     w
-hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren → do
+hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren1 → do
+  EFn.runEffectFn2 warnAny "hydrateKeyed" { ns1, name1, as1, keyedChildren1 }
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
 
@@ -59,7 +61,7 @@ hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 na
     (VDomSpec spec)
     currentNode
     currentElementChildren'
-    (List.fromFoldable keyedChildren)
+    (List.fromFoldable keyedChildren1)
 
   let
     onChild :: EFn.EffectFn3 String Int ({ node :: DOM.Node, vdom :: VDom a w, key :: String }) (Step (VDom a w) DOM.Node)
@@ -79,12 +81,13 @@ hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 na
       , ns: ns1
       , name: name1
       , children
-      , length: Array.length keyedChildren
+      , length: Array.length keyedChildren1
       }
   pure $ mkStep $ Step currentNode state patchKeyed haltKeyed
 
 buildKeyed ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w))) a w
-buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
+buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 keyedChildren1 → do
+  EFn.runEffectFn2 warnAny "buildKeyed" { ns1, name1, as1, keyedChildren1 }
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
     node :: DOM.Node
@@ -95,7 +98,7 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
       res ← EFn.runEffectFn1 build vdom
       EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
       pure res
-  (children :: Object.Object (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn3 Util.strMapWithIxE ch1 fst onChild -- build keyed childrens
+  (children :: Object.Object (Step (VDom a w) DOM.Node)) ← EFn.runEffectFn3 Util.strMapWithIxE keyedChildren1 fst onChild -- build keyed childrens
   (attrs :: Step a Unit) ← EFn.runEffectFn1 (spec.buildAttributes el) as1
   let
     state =
@@ -105,13 +108,14 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
       , ns: ns1
       , name: name1
       , children
-      , length: Array.length ch1
+      , length: Array.length keyedChildren1
       }
   pure $ mkStep $ Step node state patchKeyed haltKeyed
 
 patchKeyed ∷ ∀ a w. EFn.EffectFn2 (KeyedState a w) (VDom a w) (VDomStep a w)
 patchKeyed = EFn.mkEffectFn2 \state vdom → do
-  let { build, node, attrs, ns: ns1, name: name1, children: ch1, length: len1 } = state
+  EFn.runEffectFn2 warnAny "patchKeyed" { state, vdom }
+  let { build, node, attrs, ns: ns1, name: name1, children: keyedChildren1, length: len1 } = state
   case vdom of
     Grafted g →
       EFn.runEffectFn2 patchKeyed state (runGraft g)
@@ -126,7 +130,7 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
               , attrs: attrs2
               , ns: ns2
               , name: name2
-              , children: ch1
+              , children: keyedChildren1
               , length: 0
               }
           pure $ mkStep $ Step node nextState patchKeyed haltKeyed
@@ -146,7 +150,7 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
               res ← EFn.runEffectFn1 build v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-          children2 ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+          children2 ← EFn.runEffectFn6 Util.diffWithKeyAndIxE keyedChildren1 ch2 fst onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
@@ -165,6 +169,7 @@ patchKeyed = EFn.mkEffectFn2 \state vdom → do
 
 haltKeyed ∷ ∀ a w. EFn.EffectFn1 (KeyedState a w) Unit
 haltKeyed = EFn.mkEffectFn1 \{ node, attrs, children } → do
+  EFn.runEffectFn2 warnAny "haltKeyed" { node, attrs, children }
   parent ← EFn.runEffectFn1 Util.parentNode node
   EFn.runEffectFn2 Util.removeChild node parent
   EFn.runEffectFn2 Util.forInE children (EFn.mkEffectFn2 \_ s → EFn.runEffectFn1 halt s)

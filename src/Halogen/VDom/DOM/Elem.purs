@@ -2,33 +2,34 @@ module Halogen.VDom.DOM.Elem where
 
 import Prelude
 
-import Data.Tuple.Nested (type (/\), (/\))
-import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
-import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
+import Control.Alt ((<|>))
 import Data.Array (length, zip, fromFoldable) as Array
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
-import Data.Nullable (toNullable)
-import Effect.Uncurried as EFn
-import Effect (Effect)
-import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
-import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
-import Halogen.VDom.Util as Util
-import Halogen.VDom.DOM.Util as DOMUtil
-import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM as DOM
-import Web.DOM.Element as DOM.Element
-import Web.DOM.Node as DOM.Node
-import Web.DOM.Text as DOM.Text
-import Web.DOM.NodeList as DOM.NodeList
-import Web.DOM.Document as DOM.Document
-import Web.DOM.CharacterData as DOM.CharacterData
 import Data.List (List(..), (:))
 import Data.List as List
+import Data.Maybe (Maybe(..))
+import Data.Nullable (toNullable)
 import Data.String as String
-import Effect.Exception (error, throwException)
 import Data.Traversable (for)
-import Control.Alt ((<|>))
+import Data.Tuple.Nested (type (/\), (/\))
+import Effect (Effect)
+import Effect.Exception (error, throwException)
+import Effect.Uncurried as EFn
+import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Util as DOMUtil
+import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
+import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
+import Halogen.VDom.Util (warnAny)
+import Halogen.VDom.Util as Util
+import Unsafe.Coerce (unsafeCoerce)
+import Web.DOM as DOM
+import Web.DOM.CharacterData as DOM.CharacterData
+import Web.DOM.Document as DOM.Document
+import Web.DOM.Element as DOM.Element
+import Web.DOM.Node as DOM.Node
+import Web.DOM.NodeList as DOM.NodeList
+import Web.DOM.Text as DOM.Text
 
 type ElemState a w =
   { build ∷ VDomMachine a w
@@ -49,6 +50,7 @@ hydrateElem
     a
     w
 hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
+  EFn.runEffectFn2 warnAny "hydrateElem" { ns1, name1, as1, ch1 }
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
   -- | checkChildrenLengthIsEqualTo (Array.length normalizedChildren) currentElement
@@ -93,6 +95,7 @@ buildElem
     a
     w
 buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
+  EFn.runEffectFn2 warnAny "buildElem" { ns1, name1, as1, ch1 }
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
     node :: DOM.Node
@@ -118,6 +121,8 @@ buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
 
 patchElem ∷ ∀ a w. EFn.EffectFn2 (ElemState a w) (VDom a w) (VDomStep a w)
 patchElem = EFn.mkEffectFn2 \state vdom → do
+  EFn.runEffectFn2 warnAny "patchElem" { state, vdom }
+
   let { build, node, attrs, ns: ns1, name: name1, children: ch1 } = state
   case vdom of
     Grafted g →
@@ -175,6 +180,7 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
 
 haltElem ∷ ∀ a w. EFn.EffectFn1 (ElemState a w) Unit
 haltElem = EFn.mkEffectFn1 \{ node, attrs, children } → do
+  EFn.runEffectFn2 warnAny "haltElem" { node, attrs, children }
   parent ← EFn.runEffectFn1 Util.parentNode node
   EFn.runEffectFn2 Util.removeChild node parent
   EFn.runEffectFn2 Util.forEachE children halt

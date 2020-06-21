@@ -1,12 +1,12 @@
 module Halogen.VDom.DOM.Widget where
 
-import Prelude (Unit, bind, discard, pure, (#), ($))
-
 import Effect.Uncurried as EFn
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep, VDomHydrator)
 import Halogen.VDom.Machine (Step, Step'(..), halt, mkStep, step, unStep)
 import Halogen.VDom.Types (VDom(..), runGraft)
+import Halogen.VDom.Util (warnAny)
+import Prelude (Unit, bind, discard, pure, (#), ($))
 import Web.DOM.Node (Node) as DOM
-import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep, VDomHydrator)
 
 type WidgetState a w =
   { build ∷ VDomMachine a w
@@ -15,6 +15,7 @@ type WidgetState a w =
 
 hydrateWidget ∷ ∀ a w. VDomHydrator w a w
 hydrateWidget = EFn.mkEffectFn5 \elem (VDomSpec spec) _hydrate build w → do
+  EFn.runEffectFn2 warnAny "hydrateWidget" { w }
   res ← EFn.runEffectFn1 (spec.hydrateWidget (VDomSpec spec) elem) w
   let
     res' :: Step (VDom a w) DOM.Node
@@ -24,6 +25,7 @@ hydrateWidget = EFn.mkEffectFn5 \elem (VDomSpec spec) _hydrate build w → do
 
 buildWidget ∷ ∀ a w. VDomBuilder w a w
 buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do
+  EFn.runEffectFn2 warnAny "buildWidget" { w }
   res ← EFn.runEffectFn1 (spec.buildWidget (VDomSpec spec)) w
   let
     res' :: Step (VDom a w) DOM.Node
@@ -33,6 +35,7 @@ buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do
 
 patchWidget ∷ ∀ a w. EFn.EffectFn2 (WidgetState a w) (VDom a w) (VDomStep a w)
 patchWidget = EFn.mkEffectFn2 \state vdom → do
+  EFn.runEffectFn2 warnAny "patchWidget" { state, vdom }
   let { build, widget } = state
   case vdom of
     Grafted g →
@@ -49,4 +52,5 @@ patchWidget = EFn.mkEffectFn2 \state vdom → do
 
 haltWidget ∷ forall a w. EFn.EffectFn1 (WidgetState a w) Unit
 haltWidget = EFn.mkEffectFn1 \{ widget } → do
+  EFn.runEffectFn2 warnAny "haltWidget" { widget }
   EFn.runEffectFn1 halt widget
