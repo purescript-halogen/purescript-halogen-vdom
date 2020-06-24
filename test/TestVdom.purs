@@ -48,8 +48,15 @@ mkSpec
   → V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
 mkSpec document = V.VDomSpec
   { buildWidget: buildThunk (un VDom)
-  , hydrateWidget: hydrateThunk (un VDom)
   , buildAttributes: buildProp (const (pure unit))
-  , hydrateAttributes: hydrateProp (const (pure unit))
   , document
+  }
+
+mkSpecWithHydration
+  ∷ DOM.Document
+  → V.VDomSpecWithHydration (Array (Prop Void)) (Thunk VDom Void)
+mkSpecWithHydration document = V.VDomSpecWithHydration
+  { vdomSpec: mkSpec document
+  , hydrateWidget: hydrateThunk (un VDom)
+  , hydrateAttributes: hydrateProp (const (pure unit))
   }

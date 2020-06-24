@@ -12,7 +12,7 @@ import Data.Tuple (Tuple(..), fst, snd)
 import Effect.Uncurried as EFn
 import Foreign.Object as Object
 import Halogen.VDom.DOM.Checkers (checkIsElementNode, checkTagNameIsEqualTo)
-import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomSpecWithHydration(..), VDomStep)
 import Halogen.VDom.DOM.Util as DOMUtil
 import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
 import Halogen.VDom.Machine as Machine
@@ -44,7 +44,7 @@ hydrateKeyed
     (Array (Tuple String (VDom a w)))
     a
     w
-hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 keyedChildren1 → do
+hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpecWithHydration spec) hydrate build ns1 name1 as1 keyedChildren1 → do
   EFn.runEffectFn2 warnAny "hydrateKeyed" { ns1, name1, as1, keyedChildren1 }
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
@@ -58,7 +58,7 @@ hydrateKeyed = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 na
     DOMUtil.zipChildrenAndSplitTextNodes
     (\(node :: DOMUtil.ElementOrTextNode) (Tuple key vdom) -> { node: DOMUtil.elementOrTextNodeToNode node, vdom, key })
     snd
-    (VDomSpec spec)
+    (case spec.vdomSpec of VDomSpec vdomSpec -> vdomSpec).document
     currentNode
     currentElementChildren'
     (List.fromFoldable keyedChildren1)

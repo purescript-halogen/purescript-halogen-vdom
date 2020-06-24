@@ -16,7 +16,7 @@ import Web.DOM (Element)
 import Web.DOM.ParentNode (querySelector, QuerySelector(..)) as DOM
 import Data.Maybe (maybe)
 import Halogen.VDom.Util (addEventListener) as Util
-import Test.TestVdom (VDom(..), elem, keyed, mkSpec, text, thunk, (:=))
+import Test.TestVdom (VDom(..), elem, keyed, mkSpecWithHydration, text, thunk, (:=))
 import Web.Event.EventTarget (eventListener) as DOM
 import Web.HTML (window) as DOM
 import Web.HTML.HTMLDocument (toDocument, toParentNode) as DOM
@@ -64,10 +64,11 @@ main = do
   updateStateButton ← findRequiredElement "#update-state-button" (DOM.toParentNode doc)
 
   let
-    spec = mkSpec (DOM.toDocument doc)
+    spec = mkSpecWithHydration (DOM.toDocument doc)
     initialValue = initialState
     render = renderData
     initialVdom = un VDom (render initialValue)
+
   machine ← EFn.runEffectFn1 (V.hydrateVDom spec (DOM.Element.toNode rootElement)) initialVdom
 
   listener ← DOM.eventListener \_ev →

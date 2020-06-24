@@ -20,7 +20,7 @@ type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomS
 type VDomHydrator i a w
   = EFn.EffectFn5
   DOM.Node -- current element
-  (VDomSpec a w)
+  (VDomSpecWithHydration a w)
   (DOM.Node -> VDomMachine a w) -- top hydrate function
   (VDomMachine a w) -- top build function
   i
@@ -31,7 +31,7 @@ type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i
 type VDomHydrator4 i j k l a w
   = EFn.EffectFn8
   DOM.Node
-  (VDomSpec a w)
+  (VDomSpecWithHydration a w)
   (DOM.Node -> VDomMachine a w)
   (VDomMachine a w)
   i
@@ -44,11 +44,12 @@ type VDomHydrator4 i j k l a w
 -- | enable recursive trees of Widgets.
 newtype VDomSpec a w = VDomSpec
   { buildWidget ∷ VDomSpec a w → Machine w DOM.Node -- `buildWidget` takes a circular reference to the `VDomSpec`
-  , hydrateWidget ∷ VDomSpec a w → DOM.Node → Machine w DOM.Node
-
   , buildAttributes ∷ DOM.Element → Machine a Unit
-  , hydrateAttributes ∷ DOM.Element → Machine a Unit
+  , document ∷ DOM.Document -- We need document to be able to call `document.createElement` function
+  }
 
-  -- We need document to be able to call `document.createElement` function
-  , document ∷ DOM.Document
+newtype VDomSpecWithHydration a w = VDomSpecWithHydration
+  { vdomSpec ∷ VDomSpec a w
+  , hydrateWidget ∷ VDomSpecWithHydration a w → DOM.Node → Machine w DOM.Node
+  , hydrateAttributes ∷ DOM.Element → Machine a Unit
   }

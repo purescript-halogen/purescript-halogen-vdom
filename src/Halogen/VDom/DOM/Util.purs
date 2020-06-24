@@ -56,12 +56,12 @@ zipChildrenAndSplitTextNodes
    . EFn.EffectFn6
     (ElementOrTextNode -> vdomContainer -> output)
     (vdomContainer -> VDom a w)
-    (VDomSpec a w)
+    DOM.Document
     DOM.Node
     (List ElementOrTextNode)
     (List vdomContainer)
     (List output)
-zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec spec) parent domChildren vdomChildren ->
+zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom document parent domChildren vdomChildren ->
   case domChildren, vdomChildren of
     _, (vdomChild : vdomChildrenTail) ->
       let vdomChild' = extractVdom vdomChild
@@ -69,7 +69,7 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec s
         _, Text "" -> do
           EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 1" { parent, domChildren, vdomChildrenTail }
 
-          (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" spec.document
+          (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" document
 
           case domChildren of
             -- | when DOM is `<div></div>` (no children) and vdom is `HH.div_ [HH.text ""]` - it will create append new text node
@@ -81,7 +81,7 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec s
 
           let (head :: output) = toOutput (TextNode newChildWithEmptyText) vdomChild
 
-          (tailResult :: List output) <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildren vdomChildrenTail
+          (tailResult :: List output) <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildren vdomChildrenTail
 
           pure (head : tailResult)
         (TextNode textNode : domChildrenTail), (Text expectedText) -> do
@@ -102,7 +102,7 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec s
 
               let (head :: output) = toOutput (TextNode textNode) vdomChild
 
-              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomChildrenTail
 
               pure (head : tailResult)
 
@@ -113,7 +113,7 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec s
 
               let (head :: output) = toOutput (TextNode textNode) vdomChild
 
-              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
 
               pure (head : tailResult)
         (domChild : domChildrenTail), _ -> do
@@ -121,7 +121,7 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom (VDomSpec s
 
           let (head :: output) = toOutput domChild vdomChild
 
-          tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom (VDomSpec spec) parent domChildrenTail vdomChildrenTail
+          tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomChildrenTail
 
           pure (head : tailResult)
         _, _ -> throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"

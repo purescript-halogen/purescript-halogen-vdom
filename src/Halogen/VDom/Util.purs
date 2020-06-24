@@ -16,7 +16,6 @@ import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
 import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
 
 data STObject' a -- just like STObject, but without region
 
@@ -151,10 +150,10 @@ foreign import warnAny ∷ ∀ a . EFn.EffectFn2 String a Unit
 foreign import logAny ∷ ∀ a . EFn.EffectFn2 String a Unit
 
 fullAttributeName ∷ Maybe Namespace → ElemName → String
-fullAttributeName maybeNamespace elemName =
+fullAttributeName maybeNamespace (ElemName elemName) =
   case maybeNamespace of
-    Just namespace -> unwrap namespace <> ":" <> unwrap elemName
-    Nothing -> unwrap elemName
+    Just (Namespace namespace) -> namespace <> ":" <> elemName
+    Nothing -> elemName
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
 eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →

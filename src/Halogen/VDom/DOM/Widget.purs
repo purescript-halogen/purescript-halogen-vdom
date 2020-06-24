@@ -1,7 +1,7 @@
 module Halogen.VDom.DOM.Widget where
 
 import Effect.Uncurried as EFn
-import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomStep, VDomHydrator)
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomMachine, VDomSpec(..), VDomSpecWithHydration(..), VDomStep, VDomHydrator)
 import Halogen.VDom.Machine (Step, Step'(..), halt, mkStep, step, unStep)
 import Halogen.VDom.Types (VDom(..), runGraft)
 import Halogen.VDom.Util (warnAny)
@@ -14,9 +14,9 @@ type WidgetState a w =
   }
 
 hydrateWidget ∷ ∀ a w. VDomHydrator w a w
-hydrateWidget = EFn.mkEffectFn5 \elem (VDomSpec spec) _hydrate build w → do
+hydrateWidget = EFn.mkEffectFn5 \elem (VDomSpecWithHydration spec) _hydrate build w → do
   EFn.runEffectFn2 warnAny "hydrateWidget" { w }
-  res ← EFn.runEffectFn1 (spec.hydrateWidget (VDomSpec spec) elem) w
+  res ← EFn.runEffectFn1 (spec.hydrateWidget (VDomSpecWithHydration spec) elem) w
   let
     res' :: Step (VDom a w) DOM.Node
     res' = res # unStep \(Step n s k1 k2) →

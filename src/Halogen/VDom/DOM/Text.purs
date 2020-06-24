@@ -2,13 +2,12 @@ module Halogen.VDom.DOM.Text where
 
 import Effect.Uncurried as EFn
 import Halogen.VDom.DOM.Checkers (checkIsTextNode, checkTextContentIsEqTo)
-import Halogen.VDom.DOM.Types (VDomBuilder, VDomHydrator, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Types (VDomBuilder, VDomHydrator, VDomMachine, VDomSpec(..), VDomSpecWithHydration(..), VDomStep)
 import Halogen.VDom.Machine (Step'(..), mkStep)
 import Halogen.VDom.Types (VDom(..), runGraft)
 import Halogen.VDom.Util (warnAny)
 import Halogen.VDom.Util as Util
 import Prelude (Unit, bind, discard, otherwise, pure, ($), (==))
-import Web.DOM.Element as DOM.Element
 import Web.DOM.Node (Node) as DOM
 
 type TextState a w =
@@ -19,7 +18,7 @@ type TextState a w =
 
 -- TODO: rename this to `hydrateTextDebug` and add another function `hydrateText` but without checks?
 hydrateText ∷ ∀ a w. VDomHydrator String a w
-hydrateText = EFn.mkEffectFn5 \currentNode (VDomSpec spec) _hydrate build s → do
+hydrateText = EFn.mkEffectFn5 \currentNode (VDomSpecWithHydration spec) _hydrate build s → do
   EFn.runEffectFn2 warnAny "hydrateText" { s }
   currentText <- checkIsTextNode currentNode
   checkTextContentIsEqTo s currentText

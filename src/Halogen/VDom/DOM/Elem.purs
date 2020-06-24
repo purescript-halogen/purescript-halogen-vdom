@@ -16,7 +16,7 @@ import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Halogen.VDom.DOM.Checkers (checkChildrenLengthIsEqualTo, checkIsElementNode, checkTagNameIsEqualTo)
-import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
+import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomSpecWithHydration(..), VDomStep)
 import Halogen.VDom.DOM.Util as DOMUtil
 import Halogen.VDom.Machine (Step, Step'(..), extract, halt, mkStep, step)
 import Halogen.VDom.Types (ElemName, Namespace, VDom(..), runGraft)
@@ -49,7 +49,7 @@ hydrateElem
     (Array (VDom a w))
     a
     w
-hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 name1 as1 ch1 → do
+hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpecWithHydration spec) hydrate build ns1 name1 as1 ch1 → do
   EFn.runEffectFn2 warnAny "hydrateElem" { ns1, name1, as1, ch1 }
   currentElement <- checkIsElementNode currentNode
   checkTagNameIsEqualTo ns1 name1 currentElement
@@ -64,7 +64,7 @@ hydrateElem = EFn.mkEffectFn8 \currentNode (VDomSpec spec) hydrate build ns1 nam
     DOMUtil.zipChildrenAndSplitTextNodes
     (\(node :: DOMUtil.ElementOrTextNode) (vdom :: VDom a w) -> { node: DOMUtil.elementOrTextNodeToNode node, vdom })
     identity
-    (VDomSpec spec)
+    (case spec.vdomSpec of VDomSpec vdomSpec -> vdomSpec).document
     currentNode
     currentElementChildren'
     (List.fromFoldable ch1)

@@ -101,7 +101,7 @@ type ThunkState f i a w =
 hydrateThunk
   ∷ ∀ f i a w
   . (f i → V.VDom a w)
-  → V.VDomSpec a w
+  → V.VDomSpecWithHydration a w
   → Node
   → V.Machine (Thunk f i) Node
 hydrateThunk toVDom spec element = mkThunkBuilder (V.hydrateVDom spec element) toVDom
