@@ -19,7 +19,6 @@ You can edit this file as you like.
   , "unsafe-coerce"
   , "web-html"
   , "web-dom"
-  , "debug"
   , "strings"
   , "control"
   , "lazy"
