@@ -4,8 +4,6 @@ module Halogen.VDom.DOM
   , hydrateVDom
   ) where
 
-import Prelude
-
 import Effect.Uncurried as EFn
 import Halogen.VDom.DOM.Elem (buildElem) as Export
 import Halogen.VDom.DOM.Elem (buildElem, hydrateElem)
@@ -18,7 +16,6 @@ import Halogen.VDom.DOM.Types (VDomSpec(..), VDomSpecWithHydration(..)) as Expor
 import Halogen.VDom.DOM.Widget (buildWidget) as Export
 import Halogen.VDom.DOM.Widget (buildWidget, hydrateWidget)
 import Halogen.VDom.Types (VDom(..), runGraft)
-import Halogen.VDom.Util (warnAny)
 import Web.DOM.Node (Node) as DOM
 
 hydrateVDom ∷ ∀ a w. VDomSpecWithHydration a w → DOM.Node -> VDomMachine a w
@@ -26,7 +23,6 @@ hydrateVDom specWithHydration@(VDomSpecWithHydration specWithHydration') rootNod
   where
   build = buildVDom specWithHydration'.vdomSpec
   hydrate node = EFn.mkEffectFn1 \vdom -> do
-    EFn.runEffectFn2 warnAny "hydrate" { node, vdom }
     case vdom of
       Text s → EFn.runEffectFn5 hydrateText node specWithHydration hydrate build s
       Elem namespace elemName attribute childrenVdoms → EFn.runEffectFn8 hydrateElem node specWithHydration hydrate build namespace elemName attribute childrenVdoms
@@ -47,7 +43,6 @@ buildVDom ∷ ∀ a w. VDomSpec a w → VDomMachine a w
 buildVDom spec = build
   where
   build = EFn.mkEffectFn1 \vdom -> do
-    EFn.runEffectFn2 warnAny "build" { vdom }
     case vdom of
       Text s → EFn.runEffectFn3 buildText spec build s
       Elem namespace elemName a childrenVdoms → EFn.runEffectFn6 buildElem spec build namespace elemName a childrenVdoms

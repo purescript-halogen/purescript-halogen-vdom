@@ -76,61 +76,64 @@ main = do
 
   EFn.runEffectFn3 Util.addEventListener "click" listener updateStateButton
 
-tests ∷ Array { client ∷ String , errorMessage ∷ String , server ∷ String , title ∷ String }
-tests =
-  -- | [ { title: "Attribute → renders"
-  [ { title: "Attribute → missing prop"
-    , server: """
-    <div class="label1">test label 1</div>
-    """
-    , client: """
-    <div className="label1" foo="bar">test label 1</div>
-    """
-    , errorMessage: """
-    Warning: Prop `%s` did not match. Server: %s Client: %s%s
-    """
-    }
-  , { title: "Attribute → extra prop"
-    , server: """
-    <div class="label1" foo="bar">test label 1</div>
-    """
-    , client: """
-    <div className="label1">test label 1</div>
-    """
-    , errorMessage: """
-    Warning: Extra attributes from the server: %s%s
-    """
-    }
-  , { title: "Attribute → did not match"
-    , server: """
-    <div class="label1" foo="bar">test label 1</div>
-    """
-    , client: """
-    <div className="label1" foo="baz">test label 1</div>
-    """
-    , errorMessage: """
-    Warning: Prop `%s` did not match. Server: %s Client: %s%s
-    """
-    }
-  -- | , { title: "Prop → boolean → "
-  , { title: "Prop → controlled element → renders"
-    , server: """
-    <input type="text" value="foo">
-    """
-    , client: """
-    <input type="text" value="foo" onChange={console.log} />
-    """
-    , errorMessage: """
-    """
-    }
-  , { title: "Prop → controlled element → did not match → renders"
-    , server: """
-    <input type="text" value="foo">
-    """
-    , client: """
-    <input type="text" value="foo" onChange={console.log} />
-    """
-    , errorMessage: """
-    """
-    }
-  ]
+-- | TODO
+-- |
+-- | tests ∷ Array { client ∷ String , errorMessage ∷ String , server ∷ String , title ∷ String }
+-- | tests =
+-- |   -- | [ { title: "Attribute → renders"
+-- |   [ { title: "Attribute → missing prop"
+-- |     , server: """
+-- |     <div class="label1">test label 1</div>
+-- |     """
+-- |     , client: """
+-- |     <div className="label1" foo="bar">test label 1</div>
+-- |     """
+-- |     , errorMessage: """
+-- |     Warning: Prop `%s` did not match. Server: %s Client: %s%s
+-- |     """
+-- |     }
+-- |   , { title: "Attribute → extra prop"
+-- |     , server: """
+-- |     <div class="label1" foo="bar">test label 1</div>
+-- |     """
+-- |     , client: """
+-- |     <div className="label1">test label 1</div>
+-- |     """
+-- |     , errorMessage: """
+-- |     Warning: Extra attributes from the server: %s%s
+-- |     """
+-- |     }
+-- |   , { title: "Attribute → did not match"
+-- |     , server: """
+-- |     <div class="label1" foo="bar">test label 1</div>
+-- |     """
+-- |     , client: """
+-- |     <div className="label1" foo="baz">test label 1</div>
+-- |     """
+-- |     , errorMessage: """
+-- |     Warning: Prop `%s` did not match. Server: %s Client: %s%s
+-- |     """
+-- |     }
+-- |   -- | , { title: "Prop → boolean → "
+-- |   , { title: "Prop → controlled element → renders"
+-- |     , server: """
+-- |     <input type="text" value="foo">
+-- |     """
+-- |     , client: """
+-- |     <input type="text" value="foo" onChange={console.log} />
+-- |     """
+-- |     , errorMessage: """
+-- |     """
+-- |     }
+-- |   , { title: "Prop → controlled element → did not match → renders"
+-- |     , server: """
+-- |     <input type="text" value="foo">
+-- |     """
+-- |     , client: """
+-- |     <input type="text" value="foo" onChange={console.log} />
+-- |     """
+-- |     , errorMessage: """
+-- |     """
+-- |     }
+-- |   ]
+-- |

@@ -5,7 +5,6 @@ import Prelude
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
-import Data.String (joinWith)
 import Data.String.Common (toLower)
 import Data.Tuple (Tuple(..), fst, snd)
 import Effect (Effect)
@@ -27,11 +26,13 @@ import Foreign (unsafeToForeign, typeOf)
 import Unsafe.Coerce (unsafeCoerce)
 
 deleteRequiredElement :: EFn.EffectFn2 String (Set.Set String) Unit
-deleteRequiredElement = EFn.mkEffectFn2 \element set -> do
-  let isPresent = Fn.runFn2 Set.has element set
+deleteRequiredElement = EFn.mkEffectFn2 \element extraAttributeNames -> do
+  let isPresent = Fn.runFn2 Set.has element extraAttributeNames
   if isPresent
-    then EFn.runEffectFn2 Set.delete element set
-    else throwException $ error $ "Cannot delete element that is not present in set, " <> quote element <> " should be present in set" <> (Set.toArray set # joinWith ", ")
+    then EFn.runEffectFn2 Set.delete element extraAttributeNames
+    else do
+      EFn.runEffectFn2 Util.warnAny "Error info: " { element, extraAttributeNames }
+      throwException $ error $ "Cannot delete element " <> quote element <> " that is not present in extraAttributeNames (check warning above for more information)"
 
 hydrateApplyProp
   ∷ ∀ a
@@ -49,27 +50,27 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
       EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
       pure v
     Property propName val → do
-      -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual" { propName, val, el, extraAttributeNames }
-
       case propName of
         "className" -> do
           checkPropExistsAndIsEqual propName val el
           EFn.runEffectFn2 deleteRequiredElement "class" extraAttributeNames
         "href" -> do
-          -- | becuase on <a href="/foo"></a>
-          -- |   $0.href is eq to "http://localhost:3000/foo"
-          -- |   but
-          -- |   $0.attributes.href.value is eq to "/foo"
-          -- |   $0.getAttribute("href") is eq to "/foo"
+          -- | We use custom check (i.e. checking attribute instead of property) because:
+          -- |   with <a href="/foo"></a>
+          -- |     property $0.href is eq to "http://localhost:3000/foo"
+          -- |   but attribute
+          -- |     $0.attributes.href.value is eq to "/foo"
+          -- |     $0.getAttribute("href") is eq to "/foo" too
+          -- |
+          -- | The same is true for <link> elements also
 
-          -- | TODO: check it's on the <a> element
           checkAttributeExistsAndIsEqual Nothing "href" (anyToString val) el
           EFn.runEffectFn2 deleteRequiredElement "href" extraAttributeNames
         _ -> do
           checkPropExistsAndIsEqual propName val el
           let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
           case typeOf (unsafeToForeign val), (unsafeCoerce :: PropValue -> Boolean) val of
-            -- | if this is a boolean and is false - then it should not have been prerendered
+            -- | If this is a boolean and is false - then it should not have been prerendered
             -- |
             -- | For example:
             -- | `HH.button [HP.disabled false] []` should be rendered as `<button></button>`
@@ -83,8 +84,6 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
             -- |   `<button></button>`                  the `$0.disabled === false`
             "boolean", false -> pure unit
             _, _ -> EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
-
-      -- | EFn.runEffectFn2 warnAny "checkPropExistsAndIsEqual after" { propName, val, el, extraAttributeNames }
 
       pure v
     Handler eventType emitterInputBuilder → do

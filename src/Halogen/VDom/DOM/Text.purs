@@ -5,7 +5,6 @@ import Halogen.VDom.DOM.Checkers (checkIsTextNode, checkTextContentIsEqTo)
 import Halogen.VDom.DOM.Types (VDomBuilder, VDomHydrator, VDomMachine, VDomSpec(..), VDomSpecWithHydration(..), VDomStep)
 import Halogen.VDom.Machine (Step'(..), mkStep)
 import Halogen.VDom.Types (VDom(..), runGraft)
-import Halogen.VDom.Util (warnAny)
 import Halogen.VDom.Util as Util
 import Prelude (Unit, bind, discard, otherwise, pure, ($), (==))
 import Web.DOM.Node (Node) as DOM
@@ -16,10 +15,8 @@ type TextState a w =
   , value ∷ String
   }
 
--- TODO: rename this to `hydrateTextDebug` and add another function `hydrateText` but without checks?
 hydrateText ∷ ∀ a w. VDomHydrator String a w
 hydrateText = EFn.mkEffectFn5 \currentNode (VDomSpecWithHydration spec) _hydrate build s → do
-  EFn.runEffectFn2 warnAny "hydrateText" { s }
   currentText <- checkIsTextNode currentNode
   checkTextContentIsEqTo s currentText
   let (state :: TextState a w) = { build, node: currentNode, value: s }
@@ -27,14 +24,12 @@ hydrateText = EFn.mkEffectFn5 \currentNode (VDomSpecWithHydration spec) _hydrate
 
 buildText ∷ ∀ a w. VDomBuilder String a w
 buildText = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
-  EFn.runEffectFn2 warnAny "buildText" { s }
   node ← EFn.runEffectFn2 Util.createTextNode s spec.document
   let (state :: TextState a w) = { build, node, value: s }
   pure $ mkStep $ Step node state patchText haltText
 
 patchText ∷ ∀ a w. EFn.EffectFn2 (TextState a w) (VDom a w) (VDomStep a w)
 patchText = EFn.mkEffectFn2 \state vdom → do
-  EFn.runEffectFn2 warnAny "patchText" { state, vdom }
   let { build, node, value: value1 } = state
   case vdom of
     Grafted g →
@@ -52,6 +47,5 @@ patchText = EFn.mkEffectFn2 \state vdom → do
 
 haltText ∷ ∀ a w. EFn.EffectFn1 (TextState a w) Unit
 haltText = EFn.mkEffectFn1 \{ node } → do
-  EFn.runEffectFn2 warnAny "haltText" { node }
   parent ← EFn.runEffectFn1 Util.parentNode node
   EFn.runEffectFn2 Util.removeChild node parent

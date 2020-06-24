@@ -2,7 +2,6 @@ module Halogen.VDom.DOM.Util where
 
 import Prelude
 
-import Data.Array (fromFoldable) as Array
 import Halogen.VDom.Types (VDom(..))
 import Data.List as List
 import Data.List (List(..), (:))
@@ -10,18 +9,14 @@ import Web.DOM as DOM
 import Web.DOM.Element as DOM.Element
 import Web.DOM.Node as DOM.Node
 import Web.DOM.Text as DOM.Text
-import Web.DOM.NodeList as DOM.NodeList
 import Web.DOM.Document as DOM.Document
 import Web.DOM.CharacterData as DOM.CharacterData
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe)
 import Control.Alt ((<|>))
-import Halogen.VDom.DOM.Types (VDomBuilder4, VDomHydrator4, VDomMachine, VDomSpec(..), VDomStep)
-import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Halogen.VDom.Util as Util
 import Data.String as String
-import Unsafe.Coerce (unsafeCoerce)
 
 data ElementOrTextNode = ElementNode DOM.Element | TextNode DOM.Text
 
@@ -61,14 +56,14 @@ zipChildrenAndSplitTextNodes
     (List ElementOrTextNode)
     (List vdomContainer)
     (List output)
-zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom document parent domChildren vdomChildren ->
-  case domChildren, vdomChildren of
-    _, (vdomChild : vdomChildrenTail) ->
-      let vdomChild' = extractVdom vdomChild
-      in case domChildren, vdomChild' of
+zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom document parent domChildren vdomContainerChildren ->
+  case domChildren, vdomContainerChildren of
+    Nil, Nil -> pure Nil
+    _, (vdomContainerChild : vdomContainerChildrenTail) ->
+      let vdomChild = extractVdom vdomContainerChild
+      in case domChildren, vdomChild of
+        -- | Expected text is "", but it wasnt rendered in dom (it is never rendered) - add the "" to the dom
         _, Text "" -> do
-          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 1" { parent, domChildren, vdomChildrenTail }
-
           (newChildWithEmptyText :: DOM.Text) <- DOM.Document.createTextNode "" document
 
           case domChildren of
@@ -79,13 +74,16 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom document pa
               let (referenceNode' :: DOM.Node) = elementOrTextNodeToNode referenceNode
               void $ DOM.Node.insertBefore (DOM.Text.toNode newChildWithEmptyText) referenceNode' parent
 
-          let (head :: output) = toOutput (TextNode newChildWithEmptyText) vdomChild
+          let (head :: output) = toOutput (TextNode newChildWithEmptyText) vdomContainerChild
 
-          (tailResult :: List output) <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildren vdomChildrenTail
+          (tailResult :: List output) <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildren vdomContainerChildrenTail
 
           pure (head : tailResult)
+        -- | We have Text in dom and Text in vdom
+        -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobarbaz"]` - throw error (LT case)
+        -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobar"]` - it should just hydrate the node (EQ case)
+        -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foo", HH.text "bar"]` - it should split "foobar" on "foo" and "bar" (GT case)
         (TextNode textNode : domChildrenTail), (Text expectedText) -> do
-          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2" { parent, textNode, domChildrenTail, expectedText, vdomChildrenTail }
           textNodeLength <- DOM.CharacterData.length (DOM.Text.toCharacterData textNode)
 
           let expectedTextLength = String.length expectedText
@@ -93,37 +91,33 @@ zipChildrenAndSplitTextNodes = EFn.mkEffectFn6 \toOutput extractVdom document pa
           case compare textNodeLength expectedTextLength of
             LT -> do
               textNodeData <- DOM.CharacterData.data_ (DOM.Text.toCharacterData textNode)
-              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 LT" { }
-              throwException $ error $ "should not smaller then expected " <> textNodeData -- TODO: better errors
 
-            -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foobar"]` - it should just hydrate
+              EFn.runEffectFn2 Util.warnAny "Error info: " { textNode, expectedText }
+
+              throwException $ error $ "[zipChildrenAndSplitTextNodes] The Text node length should not smaller then expected. Expected length = " <> show expectedTextLength <> ", actual = " <> show textNodeLength <> " (check warning above for more information)"
             EQ -> do
-              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 EQ" { }
+              let (head :: output) = toOutput (TextNode textNode) vdomContainerChild
 
-              let (head :: output) = toOutput (TextNode textNode) vdomChild
-
-              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomContainerChildrenTail
 
               pure (head : tailResult)
-
-            -- | when DOM is `<div>foobar</div>` and vdom is `HH.div_ [HH.text "foo", HH.text "bar"]` - it should split "foobar" on "foo" and "bar"
             GT -> do
-              EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 2 GT" { }
               nextTextNode <- DOM.Text.splitText expectedTextLength textNode -- this is our "bar", and textNode is now our "foo" (but was - "foobar")
 
-              let (head :: output) = toOutput (TextNode textNode) vdomChild
+              let (head :: output) = toOutput (TextNode textNode) vdomContainerChild
 
-              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent (TextNode nextTextNode : domChildrenTail) vdomChildrenTail
+              tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent (TextNode nextTextNode : domChildrenTail) vdomContainerChildrenTail
 
               pure (head : tailResult)
         (domChild : domChildrenTail), _ -> do
-          EFn.runEffectFn2 Util.warnAny "zipChildrenAndSplitTextNodes 3" {}
+          let (head :: output) = toOutput domChild vdomContainerChild
 
-          let (head :: output) = toOutput domChild vdomChild
-
-          tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomChildrenTail
+          tailResult <- EFn.runEffectFn6 zipChildrenAndSplitTextNodes toOutput extractVdom document parent domChildrenTail vdomContainerChildrenTail
 
           pure (head : tailResult)
-        _, _ -> throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"
-    Nil, Nil -> pure Nil
-    _, _ -> throwException $ error $ "[zipChildrenAndSplitTextNodes] unexpected input"
+        domChildren', vdomChild' -> do
+          EFn.runEffectFn2 Util.warnAny "Error info: " { domChildren: domChildren', vdomChild: vdomChild' }
+          throwException $ error $ "[zipChildrenAndSplitTextNodes] Unexpected input (check warning above for more information)"
+    domChildren', vdomChildren' -> do
+      EFn.runEffectFn2 Util.warnAny "Error info: " { domChildren: domChildren', vdomChildren: vdomChildren' }
+      throwException $ error $ "[zipChildrenAndSplitTextNodes] Unexpected input (check warning above for more information)"
