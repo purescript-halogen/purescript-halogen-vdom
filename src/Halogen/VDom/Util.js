@@ -7,10 +7,6 @@
 // addEventListener
 // setAttribute
 
-exports.cancelBehavior = function (ty) {
-    var canceler = window.__CANCELER[ty];
-    canceler();
-}
 
 exports.unsafeGetAny = function (key, obj) {
   return obj[key];
@@ -24,14 +20,6 @@ exports.unsafeGetProp = function (key, obj) {
 
 exports.unsafeHasAny = function (key, obj) {
   return obj.hasOwnProperty(key);
-};
-
-exports.updateProperty = function (key, val, obj) {
-  window.updateProperty(obj, {value0: key, value1: val})
-};
-
-exports.addProperty = function (key, val, obj) {
-  window.addProperty(obj, {value0: key, value1: val})
 };
 
 exports.unsafeSetAny = function (key, val, obj) {
@@ -131,7 +119,7 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
   return o2;
 };
 
-exports.diffPropWithKeyAndIxE = function (o1, as, fk, f1, f2, f3, el) {
+exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) {
   var o2 = {};
   var replace = false;
   for (var i = 0; i < as.length; i++) {
@@ -151,7 +139,7 @@ exports.diffPropWithKeyAndIxE = function (o1, as, fk, f1, f2, f3, el) {
     f2(k, o1[k]);
   }
   if (replace)
-    window.replaceView(el);
+    fnObject.replaceView(el);
   return o2;
 };
 
@@ -159,7 +147,7 @@ exports.refEq = function (a, b) {
   return a === b;
 };
 
-exports.createTextNode = function (s, doc) {
+exports.createTextNode = function (s) {
   return {type: "textView", children: [], props: {text: s}}
 };
 
@@ -167,11 +155,11 @@ exports.setTextContent = function (s, n) {
   n.textContent = s;
 };
 
-exports.createElement = function (ns, name, doc) {
-  return {type: name, children: [], props: {}, __ref: window.createPrestoElement()}
+exports.createElement = function (fnObject, ns, name) {
+  return {type: name, children: [], props: {}, __ref: fnObject.createPrestoElement()};
 };
 
-exports.insertChildIx = function (type, i, a, b) {
+exports.insertChildIx = function (fnObject, type, i, a, b) {
   var n = (b.children[i]) || {__ref: {__id: "-1"}};
 
   if (!a)
@@ -191,15 +179,15 @@ exports.insertChildIx = function (type, i, a, b) {
   var index = b.children.indexOf(a);
   if (index !== -1) {
     b.children.splice(index, 1);
-    window.moveChild(a, b, i);
+    fnObject.moveChild(a, b, i);
   } else {
-    window.addChild(a, b, i);
+    fnObject.addChild(a, b ,i);
   }
   b.children.splice(i, 0, a);
   a.parentNode = b;
 };
 
-exports.removeChild = function (a, b) {
+exports.removeChild = function (fnObject, a, b) {
   var childIndex = -1;
 
   if (b && a.parentNode.__ref.__id === b.__ref.__id) {
@@ -211,7 +199,7 @@ exports.removeChild = function (a, b) {
   }
 
   if (childIndex > -1) {
-    window.removeChild(a, b, childIndex);
+    fnObject.removeChild(a,b,childIndex);
     a.props.__removed = true;
     b.children.splice(childIndex, 1);
   }
@@ -242,17 +230,21 @@ exports.removeAttribute = function (ns, attr, el) {
   }
 };
 
-exports.addEventListener = function (pr, ev, listener, el) {
+exports.addEventListener = function (fnObject, pr, ev, listener, el) {
   try{
-    if( (typeof window.manualEventsName != "undefined") && (Array.isArray(window.manualEventsName)) && (typeof window.setManualEvents == "function") && (window.manualEventsName.indexOf(ev) != -1)){
-      window.setManualEvents(ev,listener);
+    if((typeof fnObject.manualEventsName != "undefined") &&
+      (Array.isArray(fnObject.manualEventsName)) &&
+      (typeof fnObject.setManualEvents == "function") &&
+      (fnObject.manualEventsName.indexOf(ev) != -1)
+    ){
+      fnObject.setManualEvents(ev)(listener);
     }
   } catch(err){
-    console.error("Error while checking for manualEvents ");
+    console.error("Error while checking for manualEvents \n",err);
   }
   el.props[ev] = listener;
   if(pr == "patch") {
-    window.replaceView(el);
+    fnObject.replaceView(el);
   }
 };
 
