@@ -34,6 +34,11 @@ deleteRequiredElement = EFn.mkEffectFn2 \element extraAttributeNames -> do
       EFn.runEffectFn2 Util.warnAny "Error info: " { element, extraAttributeNames }
       throwException $ error $ "Cannot delete element " <> quote element <> " that is not present in extraAttributeNames (check warning above for more information)"
 
+checkPropExistsAndIsEqualAndDelete :: EFn.EffectFn5 (Set.Set String) String PropValue DOM.Element String Unit
+checkPropExistsAndIsEqualAndDelete = EFn.mkEffectFn5 \extraAttributeNames propName val el correspondingAttributeName -> do
+  checkPropExistsAndIsEqual propName val el
+  EFn.runEffectFn2 deleteRequiredElement correspondingAttributeName extraAttributeNames
+
 hydrateApplyProp
   ∷ ∀ a
   . Fn.Fn4
@@ -51,24 +56,24 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
       pure v
     Property propName val → do
       case propName of
-        "className" -> do
-          checkPropExistsAndIsEqual propName val el
-          EFn.runEffectFn2 deleteRequiredElement "class" extraAttributeNames
+        -- | We use custom check for "href" (i.e. checking attribute instead of property) because:
+        -- |   with <a href="/foo"></a>
+        -- |     property $0.href is eq to "http://localhost:3000/foo"
+        -- |   but attribute
+        -- |     $0.attributes.href.value is eq to "/foo"
+        -- |     $0.getAttribute("href") is eq to "/foo" too
+        -- |
+        -- | The same is true for <link> elements also
         "href" -> do
-          -- | We use custom check (i.e. checking attribute instead of property) because:
-          -- |   with <a href="/foo"></a>
-          -- |     property $0.href is eq to "http://localhost:3000/foo"
-          -- |   but attribute
-          -- |     $0.attributes.href.value is eq to "/foo"
-          -- |     $0.getAttribute("href") is eq to "/foo" too
-          -- |
-          -- | The same is true for <link> elements also
-
           checkAttributeExistsAndIsEqual Nothing "href" (anyToString val) el
           EFn.runEffectFn2 deleteRequiredElement "href" extraAttributeNames
+        -- | these 4 property names are taken from https://github.com/elm/virtual-dom/blob/5a5bcf48720bc7d53461b3cd42a9f19f119c5503/src/Elm/Kernel/VirtualDom.server.js#L196-L201
+        "className" -> EFn.runEffectFn5 checkPropExistsAndIsEqualAndDelete extraAttributeNames propName val el "class"
+        "htmlFor" -> EFn.runEffectFn5 checkPropExistsAndIsEqualAndDelete extraAttributeNames propName val el "for"
+        "httpEquiv" -> EFn.runEffectFn5 checkPropExistsAndIsEqualAndDelete extraAttributeNames propName val el "http-equiv"
+        "acceptCharset" -> EFn.runEffectFn5 checkPropExistsAndIsEqualAndDelete extraAttributeNames propName val el "accept-charset"
         _ -> do
           checkPropExistsAndIsEqual propName val el
-          let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
           case typeOf (unsafeToForeign val), (unsafeCoerce :: PropValue -> Boolean) val of
             -- | If this is a boolean and is false - then it should not have been prerendered
             -- |
@@ -83,7 +88,9 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
             -- |   `<button disabled=""></button>`      the `$0.disabled === true`
             -- |   `<button></button>`                  the `$0.disabled === false`
             "boolean", false -> pure unit
-            _, _ -> EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
+            _, _ ->
+              let fullAttributeName' = toLower propName -- transforms `colSpan` to `colspan`
+               in EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
 
       pure v
     Handler eventType emitterInputBuilder → do
