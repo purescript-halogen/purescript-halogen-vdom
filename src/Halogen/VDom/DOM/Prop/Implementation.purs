@@ -16,7 +16,6 @@ import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkProp
 import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropValue)
 import Halogen.VDom.DOM.Prop.Util (removeProperty, setProperty, unsafeGetProperty)
 import Halogen.VDom.Set as Set
-import Halogen.VDom.Types (ElemName(..))
 import Halogen.VDom.Util (STObject', anyToString, fullAttributeName, quote)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
@@ -51,7 +50,7 @@ hydrateApplyProp = Fn.mkFn4 \extraAttributeNames el emit events → EFn.mkEffect
   case v of
     Attribute maybeNamespace attributeName val → do
       checkAttributeExistsAndIsEqual maybeNamespace attributeName val el
-      let fullAttributeName' = fullAttributeName maybeNamespace (ElemName attributeName) -- should be lowercased
+      let fullAttributeName' = fullAttributeName maybeNamespace attributeName -- should be lowercased
       EFn.runEffectFn2 deleteRequiredElement fullAttributeName' extraAttributeNames
       pure v
     Property propName val → do

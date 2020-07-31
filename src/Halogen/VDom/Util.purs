@@ -149,11 +149,11 @@ foreign import warnAny ∷ ∀ a . EFn.EffectFn2 String a Unit
 
 foreign import logAny ∷ ∀ a . EFn.EffectFn2 String a Unit
 
-fullAttributeName ∷ Maybe Namespace → ElemName → String
-fullAttributeName maybeNamespace (ElemName elemName) =
+fullAttributeName ∷ Maybe Namespace → String → String
+fullAttributeName maybeNamespace attributeName =
   case maybeNamespace of
-    Just (Namespace namespace) -> namespace <> ":" <> elemName
-    Nothing -> elemName
+    Just (Namespace namespace) -> namespace <> ":" <> attributeName
+    Nothing -> attributeName
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
 eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →

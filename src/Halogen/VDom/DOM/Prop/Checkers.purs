@@ -14,7 +14,7 @@ import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (PropValue)
 import Halogen.VDom.DOM.Prop.Util (unsafeGetProperty)
 import Halogen.VDom.Set as Set
-import Halogen.VDom.Types (ElemName(..), Namespace)
+import Halogen.VDom.Types (Namespace)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 
@@ -25,11 +25,11 @@ checkAttributeExistsAndIsEqual maybeNamespace attributeName expectedElementValue
   case elementValue of
     Nothing → do
       EFn.runEffectFn2 Util.warnAny "Error info: " { element }
-      throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> Util.quote expectedElementValue <> ", but it is missing (check warning above for more information)"
+      throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace attributeName) <> " eq to " <> Util.quote expectedElementValue <> ", but it is missing (check warning above for more information)"
     Just elementValue' →
       unless (elementValue' == expectedElementValue) do
         EFn.runEffectFn2 Util.warnAny "Error info: " { element }
-        throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace (ElemName attributeName)) <> " eq to " <> Util.quote expectedElementValue <> ", but it was equal to " <> Util.quote elementValue' <> " (check warning above for more information)"
+        throwException $ error $ "Expected element to have an attribute " <> Util.quote (Util.fullAttributeName maybeNamespace attributeName) <> " eq to " <> Util.quote expectedElementValue <> ", but it was equal to " <> Util.quote elementValue' <> " (check warning above for more information)"
 
 checkPropExistsAndIsEqual ∷ String → PropValue → DOM.Element → Effect Unit
 checkPropExistsAndIsEqual propName expectedPropValue element = do
