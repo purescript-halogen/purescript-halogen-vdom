@@ -45,7 +45,7 @@ mkExtraAttributeNames el = do
   let
     namedNodeMap = Attributes.attributes el
   (set ∷ Set.Set String) ← Set.empty
-  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \attribute → EFn.runEffectFn2 Set.add (toLower attribute.name) set)
+  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \attribute → EFn.runEffectFn2 Set.add attribute.name set)
   pure set
 
 checkExtraAttributeNamesIsEmpty ∷ Set.Set String -> DOM.Element -> Effect Unit
