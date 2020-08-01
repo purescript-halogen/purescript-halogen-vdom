@@ -6,7 +6,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Halogen.VDom.Types (ElemName(..), Namespace)
+import Halogen.VDom.Types (ElemName(..), Namespace(..))
 import Halogen.VDom.Util as Util
 import Partial.Unsafe (unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)
@@ -61,6 +61,13 @@ checkTagNameIsEqualTo maybeNamespace (ElemName elemName) element = do
     namespaceURI :: Maybe String
     namespaceURI = DOM.Element.namespaceURI element
 
-  when (namespaceURI /= maybeNamespace') do
+    -- | default namespace is "http://www.w3.org/1999/xhtml"
+    namespaceURI' :: Maybe String
+    namespaceURI' =
+      case namespaceURI of
+           Just "http://www.w3.org/1999/xhtml" -> Nothing
+           other -> other
+
+  when (namespaceURI' /= maybeNamespace') do
     EFn.runEffectFn2 Util.warnAny "Error info: " { maybeNamespace, elemName, element }
-    throwException $ error $ "Expected element namespaceURI equal to " <> show maybeNamespace' <> ", but got " <> show namespaceURI <> " (check warning above for more information)"
+    throwException $ error $ "Expected element namespaceURI equal to " <> show maybeNamespace' <> ", but got " <> show namespaceURI' <> " (check warning above for more information)"
