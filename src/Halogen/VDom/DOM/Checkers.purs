@@ -6,7 +6,7 @@ import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
-import Halogen.VDom.Types (ElemName(..), Namespace(..))
+import Halogen.VDom.Types (ElemName(..), Namespace)
 import Halogen.VDom.Util as Util
 import Partial.Unsafe (unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)

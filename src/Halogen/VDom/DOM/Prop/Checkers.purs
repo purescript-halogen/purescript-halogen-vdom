@@ -5,7 +5,6 @@ import Prelude
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toMaybe, toNullable)
-import Data.String (toLower)
 import Data.String.Common (joinWith)
 import Effect (Effect)
 import Effect.Exception (error, throwException)
