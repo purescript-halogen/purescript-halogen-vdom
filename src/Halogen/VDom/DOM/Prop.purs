@@ -33,7 +33,7 @@ hydrateProp emit el = renderProp
 
     (props ∷ Object.Object (Prop a)) ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (Fn.runFn4 hydrateApplyProp extraAttributeNames el emit events)
 
-    checkExtraAttributeNamesIsEmpty extraAttributeNames el
+    checkExtraAttributeNamesIsEmpty ps1 extraAttributeNames el
 
     let
       (state ∷ PropState a) =

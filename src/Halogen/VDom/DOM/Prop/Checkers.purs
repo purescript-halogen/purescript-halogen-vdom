@@ -10,7 +10,7 @@ import Effect (Effect)
 import Effect.Exception (error, throwException)
 import Effect.Uncurried as EFn
 import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
-import Halogen.VDom.DOM.Prop.Types (PropValue)
+import Halogen.VDom.DOM.Prop.Types (Prop, PropValue)
 import Halogen.VDom.DOM.Prop.Util (unsafeGetProperty)
 import Halogen.VDom.Set as Set
 import Halogen.VDom.Types (Namespace)
@@ -47,8 +47,8 @@ mkExtraAttributeNames el = do
   EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \attribute → EFn.runEffectFn2 Set.add attribute.name set)
   pure set
 
-checkExtraAttributeNamesIsEmpty ∷ Set.Set String -> DOM.Element -> Effect Unit
-checkExtraAttributeNamesIsEmpty extraAttributeNames element =
+checkExtraAttributeNamesIsEmpty ∷ forall a . Array (Prop a) -> Set.Set String -> DOM.Element -> Effect Unit
+checkExtraAttributeNamesIsEmpty propsToHydrate extraAttributeNames element =
   when (Set.size extraAttributeNames > 0) do
-    EFn.runEffectFn2 Util.warnAny "Error info: " { extraAttributeNames, element }
+    EFn.runEffectFn2 Util.warnAny "Error info: " { extraAttributeNames, element, propsToHydrate }
     throwException $ error $ "Extra attributes from the server: " <> (Set.toArray extraAttributeNames # joinWith ", ") <> " (check warning above for more information)"
