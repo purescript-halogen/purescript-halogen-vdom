@@ -120,6 +120,7 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
 };
 
 exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) {
+  var removedProps = [];
   var o2 = {};
   var replace = false;
   for (var i = 0; i < as.length; i++) {
@@ -137,9 +138,10 @@ exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) 
     }
     replace = true;
     f2(k, o1[k]);
+    removedProps.push(k);
   }
   if (replace)
-    fnObject.replaceView(el);
+    fnObject.replaceView(el, removedProps);
   return o2;
 };
 
@@ -244,7 +246,7 @@ exports.addEventListener = function (fnObject, pr, ev, listener, el) {
   }
   el.props[ev] = listener;
   if(pr == "patch") {
-    fnObject.replaceView(el);
+    fnObject.replaceView(el, []);
   }
 };
 
