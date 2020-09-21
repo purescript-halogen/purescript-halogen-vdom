@@ -94,7 +94,7 @@ derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
 
 type FnObject =
-  { replaceView :: forall a. EFn.EffectFn1 a Unit
+  { replaceView :: forall a . EFn.EffectFn2 a (Array String) Unit
   , setManualEvents :: forall a b. a -> b -> Effect Unit
   , addChild :: forall a b. EFn.EffectFn3 a b Int Unit
   , moveChild :: forall a b. EFn.EffectFn3 a b Int Unit
