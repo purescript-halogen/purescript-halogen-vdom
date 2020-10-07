@@ -15,7 +15,8 @@ import Foreign.Object as Object
 import Halogen.VDom.DOM.Prop.Checkers (checkAttributeExistsAndIsEqual, checkPropExistsAndIsEqual)
 import Halogen.VDom.DOM.Prop.Types (ElemRef(..), EmitterInputBuilder, EventListenerAndCurrentEmitterInputBuilder, Prop(..), PropValue)
 import Halogen.VDom.DOM.Prop.Util (removeProperty, setProperty, unsafeGetProperty)
-import Halogen.VDom.Set as Set
+import Halogen.VDom.JsSet (JsSet)
+import Halogen.VDom.JsSet as JsSet
 import Halogen.VDom.Util (STObject', anyToString, fullAttributeName, quote)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
@@ -24,16 +25,16 @@ import Web.Event.EventTarget (eventListener, EventListener) as DOM
 import Foreign (unsafeToForeign, typeOf)
 import Unsafe.Coerce (unsafeCoerce)
 
-deleteRequiredElement :: EFn.EffectFn2 String (Set.Set String) Unit
+deleteRequiredElement :: EFn.EffectFn2 String (JsSet String) Unit
 deleteRequiredElement = EFn.mkEffectFn2 \element extraAttributeNames -> do
-  let isPresent = Fn.runFn2 Set.has element extraAttributeNames
+  isPresent <- EFn.runEffectFn2 JsSet._has element extraAttributeNames
   if isPresent
-    then EFn.runEffectFn2 Set.delete element extraAttributeNames
+    then EFn.runEffectFn2 JsSet._delete element extraAttributeNames
     else do
       EFn.runEffectFn2 Util.warnAny "Error info: " { element, extraAttributeNames }
       throwException $ error $ "Cannot delete element " <> quote element <> " that is not present in extraAttributeNames (check warning above for more information)"
 
-checkPropExistsAndIsEqualAndDelete :: EFn.EffectFn5 (Set.Set String) String PropValue DOM.Element String Unit
+checkPropExistsAndIsEqualAndDelete :: EFn.EffectFn5 (JsSet String) String PropValue DOM.Element String Unit
 checkPropExistsAndIsEqualAndDelete = EFn.mkEffectFn5 \extraAttributeNames propName val el correspondingAttributeName -> do
   checkPropExistsAndIsEqual propName val el
   EFn.runEffectFn2 deleteRequiredElement correspondingAttributeName extraAttributeNames
@@ -41,7 +42,7 @@ checkPropExistsAndIsEqualAndDelete = EFn.mkEffectFn5 \extraAttributeNames propNa
 hydrateApplyProp
   ∷ ∀ a
   . Fn.Fn4
-  (Set.Set String)
+  (JsSet String)
   DOM.Element
   (a → Effect Unit)
   (STObject' (EventListenerAndCurrentEmitterInputBuilder a))

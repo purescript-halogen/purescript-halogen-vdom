@@ -12,7 +12,8 @@ import Effect.Uncurried as EFn
 import Halogen.VDom.Attributes (attributes, forEachE) as Attributes
 import Halogen.VDom.DOM.Prop.Types (Prop, PropValue)
 import Halogen.VDom.DOM.Prop.Util (unsafeGetProperty)
-import Halogen.VDom.Set as Set
+import Halogen.VDom.JsSet (JsSet)
+import Halogen.VDom.JsSet as JsSet
 import Halogen.VDom.Types (Namespace)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
@@ -39,16 +40,18 @@ checkPropExistsAndIsEqual propName expectedPropValue element = do
     throwException $ error $ "Expected element to have a prop " <> Util.quote propName <> " eq to " <> Util.quote (Util.anyToString expectedPropValue) <> ", but it was equal to " <> Util.quote (Util.anyToString propValue) <> " (check warning above for more information)"
 
 -- | Inspired by https://github.com/facebook/react/blob/823dc581fea8814a904579e85a62da6d18258830/packages/react-dom/src/client/ReactDOMComponent.js#L1030
-mkExtraAttributeNames ∷ DOM.Element → Effect (Set.Set String)
+mkExtraAttributeNames ∷ DOM.Element → Effect (JsSet String)
 mkExtraAttributeNames el = do
   let
     namedNodeMap = Attributes.attributes el
-  (set ∷ Set.Set String) ← Set.empty
-  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \attribute → EFn.runEffectFn2 Set.add attribute.name set)
+  (set ∷ JsSet String) ← JsSet.empty
+  EFn.runEffectFn2 Attributes.forEachE namedNodeMap (EFn.mkEffectFn1 \attribute → EFn.runEffectFn2 JsSet._add attribute.name set)
   pure set
 
-checkExtraAttributeNamesIsEmpty ∷ forall a . Array (Prop a) -> Set.Set String -> DOM.Element -> Effect Unit
-checkExtraAttributeNamesIsEmpty propsToHydrate extraAttributeNames element =
-  when (Set.size extraAttributeNames > 0) do
+checkExtraAttributeNamesIsEmpty ∷ forall a . Array (Prop a) -> JsSet String -> DOM.Element -> Effect Unit
+checkExtraAttributeNamesIsEmpty propsToHydrate extraAttributeNames element = do
+  size <- EFn.runEffectFn1 JsSet._size extraAttributeNames
+  when (size > 0) do
     EFn.runEffectFn2 Util.warnAny "Error info: " { extraAttributeNames, element, propsToHydrate }
-    throwException $ error $ "Extra attributes from the server: " <> (Set.toArray extraAttributeNames # joinWith ", ") <> " (check warning above for more information)"
+    extraAttributeNames' <- EFn.runEffectFn1 JsSet._toArray extraAttributeNames
+    throwException $ error $ "Extra attributes from the server: " <> joinWith ", " extraAttributeNames' <> " (check warning above for more information)"
