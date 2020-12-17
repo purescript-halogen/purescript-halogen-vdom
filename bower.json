@@ -34,7 +34,6 @@
     "purescript-foreign": "master"
   },
   "devDependencies": {
-    "purescript-js-timers": "main",
     "purescript-exists": "master"
   }
 }

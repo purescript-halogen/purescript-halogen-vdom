@@ -3,11 +3,19 @@ exports.getData = function () {
 };
 
 exports.getTimeout = function () {
-  return ENV.timeout
+  return ENV.timeout;
 };
 
 exports.pingRenderRate = function () {
   Monitoring.renderRate.ping();
+};
+
+exports.setTimeout = function (ms) {
+  return function (fn) {
+    return function () {
+      return setTimeout(fn, ms);
+    };
+  };
 };
 
 exports.requestAnimationFrame = function (f) {
@@ -15,5 +23,5 @@ exports.requestAnimationFrame = function (f) {
     window.requestAnimationFrame(function () {
       f();
     });
-  }
-}
+  };
+};
