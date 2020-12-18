@@ -10,7 +10,6 @@ import Data.Newtype (class Newtype, un, wrap)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Ref as Ref
-import Effect.Timer as Timer
 import Effect.Uncurried as EFn
 import Halogen.VDom as V
 import Halogen.VDom.DOM.Prop (Prop(..), propFromString, buildProp)
@@ -128,6 +127,8 @@ foreign import pingRenderRate ∷ Effect Unit
 
 foreign import requestAnimationFrame ∷ Effect Unit → Effect Unit
 
+foreign import setTimeout :: Int -> Effect Unit -> Effect Int
+
 mkRenderQueue
   ∷ ∀ a
   . V.VDomSpec (Array (Prop Void)) (Thunk VDom Void)
@@ -180,5 +181,5 @@ main = do
         timeout ← getTimeout
         pushQueue newData
         pingRenderRate
-        void (Timer.setTimeout timeout loop)
+        void (setTimeout timeout loop)
     loop

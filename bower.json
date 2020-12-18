@@ -1,6 +1,6 @@
 {
   "name": "purescript-halogen-vdom",
-  "homepage": "https://github.com/slamdata/purescript-halogen-vdom",
+  "homepage": "https://github.com/purescript-halogen/purescript-halogen-vdom",
   "authors": [
     "Nathan Faubion <nathan@n-son.com>"
   ],
@@ -12,7 +12,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git://github.com/slamdata/purescript-halogen-vdom.git"
+    "url": "https://github.com/purescript-halogen/purescript-halogen-vdom.git"
   },
   "license": "Apache-2.0",
   "ignore": [
@@ -22,19 +22,18 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "^4.0.0",
-    "purescript-effect": "^2.0.0",
-    "purescript-tuples": "^5.0.0",
-    "purescript-web-html": "^2.0.0",
-    "purescript-foreign-object": "^2.0.1",
-    "purescript-maybe": "^4.0.0",
-    "purescript-unsafe-coerce": "^4.0.0",
-    "purescript-bifunctors": "^4.0.0",
-    "purescript-refs": "^4.1.0",
-    "purescript-foreign": "^5.0.0"
+    "purescript-prelude": "master",
+    "purescript-effect": "master",
+    "purescript-tuples": "master",
+    "purescript-web-html": "master",
+    "purescript-foreign-object": "master",
+    "purescript-maybe": "master",
+    "purescript-unsafe-coerce": "master",
+    "purescript-bifunctors": "master",
+    "purescript-refs": "master",
+    "purescript-foreign": "master"
   },
   "devDependencies": {
-    "purescript-js-timers": "^4.0.0",
-    "purescript-exists": "^4.0.0"
+    "purescript-exists": "master"
   }
 }
