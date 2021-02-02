@@ -26,6 +26,7 @@ foreign import data ThunkArg ∷ Type
 
 foreign import data ThunkId ∷ Type
 
+data Thunk :: (Type -> Type) -> Type -> Type
 data Thunk f i
   = Thunk
     ThunkId
@@ -93,6 +94,7 @@ unsafeEqThunk = Fn.mkFn2 \(Thunk id eqFn _ renderArg) (Thunk id' eqFn' _ renderA
   Fn.runFn2 Util.refEq eqFn eqFn' &&
   Fn.runFn2 eqFn renderArg renderArg'
 
+type ThunkState :: (Type -> Type) -> Type -> Type -> Type -> Type
 type ThunkState f i a w =
   { thunk ∷ Thunk f i -- prev thunk
   , vdom ∷ M.Step (V.VDom a w) Node
