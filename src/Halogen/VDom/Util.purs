@@ -17,7 +17,7 @@ import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
 import Data.Maybe (Maybe(..))
 
-data STObject' a -- just like STObject, but without region
+foreign import data STObject' :: Type -> Type
 
 newMutMap ∷ ∀ a. Effect (STObject' a)
 newMutMap = unsafeCoerce STObject.new

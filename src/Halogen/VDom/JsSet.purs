@@ -5,7 +5,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Uncurried (EffectFn1, EffectFn2) as EFn
 
-data JsSet a
+foreign import data JsSet :: Type -> Type
 
 foreign import empty ∷ ∀ a . Effect (JsSet a)
 
