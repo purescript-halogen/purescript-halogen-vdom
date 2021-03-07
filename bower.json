@@ -22,18 +22,18 @@
     "output"
   ],
   "dependencies": {
-    "purescript-prelude": "master",
-    "purescript-effect": "master",
-    "purescript-tuples": "master",
-    "purescript-web-html": "master",
-    "purescript-foreign-object": "master",
-    "purescript-maybe": "master",
-    "purescript-unsafe-coerce": "master",
-    "purescript-bifunctors": "master",
-    "purescript-refs": "master",
-    "purescript-foreign": "master"
+    "purescript-prelude": "^5.0.0",
+    "purescript-effect": "^3.0.0",
+    "purescript-tuples": "^6.0.0",
+    "purescript-web-html": "^3.0.0",
+    "purescript-foreign-object": "^3.0.0",
+    "purescript-maybe": "^5.0.0",
+    "purescript-unsafe-coerce": "^5.0.0",
+    "purescript-bifunctors": "^5.0.0",
+    "purescript-refs": "^5.0.0",
+    "purescript-foreign": "^6.0.0"
   },
   "devDependencies": {
-    "purescript-exists": "master"
+    "purescript-exists": "^5.0.0"
   }
 }
