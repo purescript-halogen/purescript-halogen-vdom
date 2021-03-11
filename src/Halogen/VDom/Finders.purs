@@ -8,7 +8,7 @@ import Web.DOM (Element)
 import Web.DOM.Element (toParentNode) as DOM.Element
 import Web.DOM.ParentNode (firstElementChild, childElementCount) as DOM.ParentNode
 
--- | Used for hydration
+-- | Used for hydration in halogen code and in halogen-vdom tests
 findElementFirstChild :: Element -> Effect (Either String Element)
 findElementFirstChild container = do
   let
