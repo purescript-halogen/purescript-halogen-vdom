@@ -157,6 +157,14 @@ exports.hasAttribute = function (ns, attr, el) {
   }
 };
 
+exports.getAttribute = function (ns, attr, el) {
+  if (ns != null) {
+    return el.getAttributeNS(ns, attr);
+  } else {
+    return el.getAttribute(attr);
+  }
+};
+
 exports.addEventListener = function (ev, listener, el) {
   el.addEventListener(ev, listener, false);
 };
@@ -166,3 +174,15 @@ exports.removeEventListener = function (ev, listener, el) {
 };
 
 exports.jsUndefined = void 0;
+
+exports.anyToString = function (a) {
+  return String(a);
+};
+
+exports.warnAny = function(message, x) {
+  console.warn(message, x)
+}
+
+exports.logAny = function(message, x) {
+  console.log(message, x)
+}

@@ -102,3 +102,4 @@ newtype Namespace = Namespace String
 derive instance newtypeNamespace ∷ Newtype Namespace _
 derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
+derive newtype instance showNamespace ∷ Show Namespace

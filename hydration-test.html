@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta name="description" content="DBMON HALOGEN-VDOM" />
+  <meta charset="utf-8">
+  <title>hydration test</title>
+
+  <style>
+  .component { background-color: aquamarine; }
+  .label1 { color: red; }
+  .label2 { color: blue; }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="component"><div class="label1">test label 1</div><div class="label2">test label 2</div></div>
+  </div>
+
+  <button id="update-state-button">Update state</button>
+  <script src="hydration-test.js"></script>
+</body>
+
+</html>
