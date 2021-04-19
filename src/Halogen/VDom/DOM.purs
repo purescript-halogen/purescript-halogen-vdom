@@ -153,7 +153,7 @@ patchElem = EFn.mkEffectFn2 \state vdom → do
               res ← EFn.runEffectFn2 step s v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
               pure res
-            onThis = EFn.mkEffectFn2 \ix s → EFn.runEffectFn1 halt s
+            onThis = EFn.mkEffectFn2 \_ s → EFn.runEffectFn1 halt s
             onThat = EFn.mkEffectFn2 \ix v → do
               res ← EFn.runEffectFn1 build v
               EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
@@ -196,7 +196,7 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement (toNullable ns1) name1 spec.document
   let
     node = DOMElement.toNode el
-    onChild = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do
+    onChild = EFn.mkEffectFn3 \_ ix (Tuple _ vdom) → do
       res ← EFn.runEffectFn1 build vdom
       EFn.runEffectFn3 Util.insertChildIx ix (extract res) node
       pure res
@@ -279,7 +279,7 @@ buildWidget ∷ ∀ a w. VDomBuilder w a w
 buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do
   res ← EFn.runEffectFn1 (spec.buildWidget (VDomSpec spec)) w
   let
-    res' = res # unStep \(Step n s k1 k2) →
+    res' = res # unStep \(Step n s _ _) →
       mkStep $ Step n { build, widget: res } patchWidget haltWidget
   pure res'
 
@@ -292,7 +292,7 @@ patchWidget = EFn.mkEffectFn2 \state vdom → do
     Widget w → do
       res ← EFn.runEffectFn2 step widget w
       let
-        res' = res # unStep \(Step n s k1 k2) →
+        res' = res # unStep \(Step n _ _ _) →
           mkStep $ Step n { build, widget: res } patchWidget haltWidget
       pure res'
     _ → do
