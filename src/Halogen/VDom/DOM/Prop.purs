@@ -40,7 +40,7 @@ data Prop a
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
   map f (Ref g) = Ref (map f <$> g)
-  map f p = unsafeCoerce p
+  map _ p = unsafeCoerce p
 
 data ElemRef a
   = Created a
