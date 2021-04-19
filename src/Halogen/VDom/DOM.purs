@@ -279,7 +279,7 @@ buildWidget ∷ ∀ a w. VDomBuilder w a w
 buildWidget = EFn.mkEffectFn3 \(VDomSpec spec) build w → do
   res ← EFn.runEffectFn1 (spec.buildWidget (VDomSpec spec)) w
   let
-    res' = res # unStep \(Step n s _ _) →
+    res' = res # unStep \(Step n _ _ _) →
       mkStep $ Step n { build, widget: res } patchWidget haltWidget
   pure res'
 
