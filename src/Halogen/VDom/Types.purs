@@ -31,6 +31,7 @@ data VDom a w
   | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
+  | Microapp String a
 
 instance functorVDom ∷ Functor (VDom a) where
   map g (Text a) = Text a
@@ -78,6 +79,7 @@ runGraft =
       go (Keyed ns n a ch) = Keyed ns n (fa a) (map (map go) ch)
       go (Widget w) = Widget (fw w)
       go (Grafted g) = Grafted (bimap fa fw g)
+      go (Microapp s a) = Microapp s (fa a)
     in
       go v
 

@@ -22,6 +22,7 @@ module Halogen.VDom.Util
   , createTextNode
   , setTextContent
   , createElement
+  , createMicroapp
   , insertChildIx
   , removeChild
   , parentNode
@@ -168,6 +169,9 @@ foreign import setTextContent
 
 foreign import createElement
   ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
+
+foreign import createMicroapp
+  ∷ EFn.EffectFn1 FnObject DOM.Element
 
 foreign import insertChildIx
   ∷ EFn.EffectFn5 FnObject String Int DOM.Node DOM.Node Unit

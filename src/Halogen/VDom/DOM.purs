@@ -16,10 +16,11 @@ import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
 import Effect (Effect)
 import Effect.Uncurried as EFn
+import Foreign (Foreign)
 import Foreign.Object as Object
 import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), Namespace(..), VDom(..), runGraft, FnObject(..))
+import Halogen.VDom.Types (ElemName(..), FnObject(..), Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOMElement
@@ -61,6 +62,46 @@ buildVDom spec = build
     Keyed ns n a ch → EFn.runEffectFn6 buildKeyed spec build ns n a ch
     Widget w → EFn.runEffectFn3 buildWidget spec build w
     Grafted g → EFn.runEffectFn1 build (runGraft g)
+    Microapp s g → EFn.runEffectFn3 buildMicroapp spec build s -- TODO fix
+
+type MicroAppState a w =
+  { build ∷ VDomMachine a w
+  , node ∷ DOM.Node
+  , requestId :: String
+  , service :: String
+  , payload :: Maybe Foreign
+  }
+
+buildMicroapp ∷ ∀ a w. VDomBuilder String a w
+buildMicroapp = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
+  -- GET ID, SCHEDULE AN AFTER RENDER CALL TO M-APP
+  -- MAYBE ADD A FUNCTION FROM PRESTO_DOM TO SCHEDULE
+  el ← EFn.runEffectFn1 Util.createMicroapp spec.fnObject
+  let node = DOMElement.toNode el
+  let state = { build, node, service: s, requestId : "23451234", payload : Nothing }
+  pure $ mkStep $ Step node state (patchMicroapp spec.fnObject) (haltMicroapp spec.fnObject)
+
+patchMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn2 (MicroAppState a w) (VDom a w) (VDomStep a w)
+patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
+  let { build, node, service: value1, requestId, payload} = state
+  case vdom of 
+    Grafted g →
+      EFn.runEffectFn2 (patchMicroapp fnObject) state (runGraft g)
+    Microapp s value2 -- CHANGE IN PAYLOAD, NEEDS TO TERMINATE OLD / FIRE EVENT TO OTHER M_APP
+      | value1 == s →
+          pure $ mkStep $ Step node state (patchMicroapp fnObject) (haltMicroapp fnObject)
+      | otherwise → do
+          let nextState = { build, node, service: s, requestId, payload }
+          EFn.runEffectFn2 Util.setTextContent s node
+          pure $ mkStep $ Step node nextState (patchMicroapp fnObject) (haltMicroapp fnObject)
+    _ → do
+      EFn.runEffectFn1 (haltMicroapp fnObject) state
+      EFn.runEffectFn1 build vdom
+
+haltMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn1 (MicroAppState a w) Unit
+haltMicroapp fnObject = EFn.mkEffectFn1 \{ node } → do
+  parent ← EFn.runEffectFn1 Util.parentNode node
+  EFn.runEffectFn3 Util.removeChild fnObject node parent
 
 type TextState a w =
   { build ∷ VDomMachine a w
