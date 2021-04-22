@@ -162,7 +162,7 @@ exports.createElement = function (fnObject, ns, name) {
 };
 
 exports.createMicroapp = function (fnObject) {
-  return {type: "microapp", props: {}, __ref: fnObject.createPrestoElement()}; 
+  return {type: "microapp", children: [], props: {}, __ref: fnObject.createPrestoElement()};
 };
 
 exports.insertChildIx = function (fnObject, type, i, a, b) {

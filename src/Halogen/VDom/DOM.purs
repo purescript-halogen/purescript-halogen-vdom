@@ -36,6 +36,8 @@ type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomS
 
 type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i j k l (VDomStep a w)
 
+type VDomBuilder6 i j a w = EFn.EffectFn4 (VDomSpec a w) (VDomMachine a w) i j (VDomStep a w)
+
 -- | Widget machines recursively reference the configured spec to potentially
 -- | enable recursive trees of Widgets.
 newtype VDomSpec a w = VDomSpec
@@ -62,36 +64,40 @@ buildVDom spec = build
     Keyed ns n a ch → EFn.runEffectFn6 buildKeyed spec build ns n a ch
     Widget w → EFn.runEffectFn3 buildWidget spec build w
     Grafted g → EFn.runEffectFn1 build (runGraft g)
-    Microapp s g → EFn.runEffectFn3 buildMicroapp spec build s -- TODO fix
+    Microapp s g → EFn.runEffectFn4 buildMicroapp spec build s g -- TODO fix
 
 type MicroAppState a w =
   { build ∷ VDomMachine a w
   , node ∷ DOM.Node
   , requestId :: String
+  , attrs ∷ Step a Unit
   , service :: String
   , payload :: Maybe Foreign
   }
 
-buildMicroapp ∷ ∀ a w. VDomBuilder String a w
-buildMicroapp = EFn.mkEffectFn3 \(VDomSpec spec) build s → do
+buildMicroapp ∷ ∀ a w. VDomBuilder6 String a a w
+buildMicroapp = EFn.mkEffectFn4 \(VDomSpec spec) build s as1 → do
   -- GET ID, SCHEDULE AN AFTER RENDER CALL TO M-APP
   -- MAYBE ADD A FUNCTION FROM PRESTO_DOM TO SCHEDULE
   el ← EFn.runEffectFn1 Util.createMicroapp spec.fnObject
   let node = DOMElement.toNode el
-  let state = { build, node, service: s, requestId : "23451234", payload : Nothing }
+  attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
+  let state = { build, node, service: s, attrs, requestId : "23451234", payload : Nothing }
   pure $ mkStep $ Step node state (patchMicroapp spec.fnObject) (haltMicroapp spec.fnObject)
 
 patchMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn2 (MicroAppState a w) (VDom a w) (VDomStep a w)
 patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
-  let { build, node, service: value1, requestId, payload} = state
-  case vdom of 
+  let { build, node, attrs, service: value1, requestId, payload} = state
+  case vdom of
     Grafted g →
       EFn.runEffectFn2 (patchMicroapp fnObject) state (runGraft g)
     Microapp s value2 -- CHANGE IN PAYLOAD, NEEDS TO TERMINATE OLD / FIRE EVENT TO OTHER M_APP
-      | value1 == s →
-          pure $ mkStep $ Step node state (patchMicroapp fnObject) (haltMicroapp fnObject)
+      | value1 == s → do
+          attrs2 ← EFn.runEffectFn2 step attrs value2
+          pure $ mkStep $ Step node (state {attrs = attrs2}) (patchMicroapp fnObject) (haltMicroapp fnObject)
       | otherwise → do
-          let nextState = { build, node, service: s, requestId, payload }
+          attrs2 ← EFn.runEffectFn2 step attrs value2
+          let nextState = { build, node, attrs: attrs2, service: s, requestId, payload}
           EFn.runEffectFn2 Util.setTextContent s node
           pure $ mkStep $ Step node nextState (patchMicroapp fnObject) (haltMicroapp fnObject)
     _ → do
