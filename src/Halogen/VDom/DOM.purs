@@ -79,10 +79,11 @@ buildMicroapp ∷ ∀ a w. VDomBuilder6 String a a w
 buildMicroapp = EFn.mkEffectFn4 \(VDomSpec spec) build s as1 → do
   -- GET ID, SCHEDULE AN AFTER RENDER CALL TO M-APP
   -- MAYBE ADD A FUNCTION FROM PRESTO_DOM TO SCHEDULE
-  el ← EFn.runEffectFn1 Util.createMicroapp spec.fnObject
+  requestId <- Util.generateUUID
+  el ← EFn.runEffectFn3 Util.createMicroapp spec.fnObject requestId s
   let node = DOMElement.toNode el
   attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
-  let state = { build, node, service: s, attrs, requestId : "23451234", payload : Nothing }
+  let state = { build, node, service: s, attrs, requestId : requestId, payload : Nothing }
   pure $ mkStep $ Step node state (patchMicroapp spec.fnObject) (haltMicroapp spec.fnObject)
 
 patchMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn2 (MicroAppState a w) (VDom a w) (VDomStep a w)

@@ -161,8 +161,8 @@ exports.createElement = function (fnObject, ns, name) {
   return {type: name, children: [], props: {}, __ref: fnObject.createPrestoElement()};
 };
 
-exports.createMicroapp = function (fnObject) {
-  return {type: "microapp", children: [], props: {}, __ref: fnObject.createPrestoElement()};
+exports.createMicroapp = function (fnObject, requestId, service ) {
+  return {type: "microapp", children: [], props: {}, requestId : requestId, __ref: fnObject.createPrestoElement(), service : service};
 };
 
 exports.insertChildIx = function (fnObject, type, i, a, b) {
@@ -260,3 +260,13 @@ exports.removeEventListener = function (ev, listener, el) {
 };
 
 exports.jsUndefined = void 0;
+
+exports.generateUUID = function() {
+  function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+                  .toString(16)
+                  .substring(1);
+  }
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+}

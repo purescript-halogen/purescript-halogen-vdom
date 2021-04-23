@@ -24,6 +24,7 @@ module Halogen.VDom.Util
   , createElement
   , createMicroapp
   , insertChildIx
+  , generateUUID
   , removeChild
   , parentNode
   , setAttribute
@@ -33,6 +34,7 @@ module Halogen.VDom.Util
   , removeProperty
   , JsUndefined
   , jsUndefined
+  , generateUUID
   ) where
 
 import Prelude
@@ -171,7 +173,9 @@ foreign import createElement
   ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
 
 foreign import createMicroapp
-  ∷ EFn.EffectFn1 FnObject DOM.Element
+  ∷ EFn.EffectFn3 FnObject String String DOM.Element
+
+foreign import generateUUID :: Effect String
 
 foreign import insertChildIx
   ∷ EFn.EffectFn5 FnObject String Int DOM.Node DOM.Node Unit
