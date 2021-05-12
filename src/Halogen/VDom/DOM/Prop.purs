@@ -38,6 +38,7 @@ data Prop a
   | Handler DOM.EventType (DOM.Event → Maybe a)
   | Ref (ElemRef DOM.Element → Maybe a)
   | BHandler String (Unit -> Maybe a)
+  | Payload String
 
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
@@ -141,6 +142,12 @@ buildProp emit fnObject el = renderProp
       BHandler ty behavior → do
          EFn.runEffectFn1 mbEmit (behavior unit)
          pure v
+      Payload payload -> do
+        _ <- case pr of
+          "render" -> EFn.runEffectFn3 updateMicroAppPayload payload el false
+          _ -> EFn.runEffectFn3 updateMicroAppPayload payload el true
+            -- TODO ADD UPDATE_ORDER :: THIS LOOKS USELESS TO BE HONEST
+        pure v
 
   diffProp = Fn.mkFn2 \prevEvents events → EFn.mkEffectFn4 \_ _ v1 v2 →
     case v1, v2 of
@@ -163,6 +170,12 @@ buildProp emit fnObject el = renderProp
                 pure v2
           _, _ → do
             EFn.runEffectFn3 updateProperty prop2 val2 el
+            pure v2
+      Payload val1, Payload val2 →
+        if Fn.runFn2 Util.refEq val1 val2
+          then pure v2
+          else do
+            EFn.runEffectFn3 updateMicroAppPayload val2 el true
             pure v2
       Handler _ _, Handler (DOM.EventType ty) f → do
         let
@@ -188,12 +201,16 @@ buildProp emit fnObject el = renderProp
       BHandler ty _ → do
          _ <- EFn.runEffectFn1 fnObject.cancelBehavior ty
          pure unit
+      Payload _ -> pure unit
 
   updateProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
   updateProperty = fnObject.updateProperty
 
   addProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
   addProperty = fnObject.addProperty
+
+  updateMicroAppPayload ∷ EFn.EffectFn3 String DOM.Element Boolean Unit
+  updateMicroAppPayload = fnObject.updateMicroAppPayload
 
 propToStrKey ∷ ∀ i. Prop i → String
 propToStrKey = case _ of
@@ -203,6 +220,7 @@ propToStrKey = case _ of
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
   BHandler ty _ -> "bhandler/" <> ty
+  Payload _ -> "payload"
 
 setProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
 setProperty = Util.unsafeSetProp

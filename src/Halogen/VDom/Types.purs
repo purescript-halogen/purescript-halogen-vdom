@@ -106,5 +106,6 @@ type FnObject =
   , updateProperty :: ∀ a b. EFn.EffectFn3 String a b Unit
   , cancelBehavior :: EFn.EffectFn1 String Unit
   , manualEventsName :: Array String
+  , updateMicroAppPayload :: ∀ b. EFn.EffectFn3 String b Boolean Unit
   }
 

@@ -97,10 +97,10 @@ patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
           attrs2 ← EFn.runEffectFn2 step attrs value2
           pure $ mkStep $ Step node (state {attrs = attrs2}) (patchMicroapp fnObject) (haltMicroapp fnObject)
       | otherwise → do
-          attrs2 ← EFn.runEffectFn2 step attrs value2
-          let nextState = { build, node, attrs: attrs2, service: s, requestId, payload}
-          EFn.runEffectFn2 Util.setTextContent s node
-          pure $ mkStep $ Step node nextState (patchMicroapp fnObject) (haltMicroapp fnObject)
+          -- NOT HANDLED THIS IS DUMMY CODE 
+          -- CASE WHERE SERVICE CHANGES IS NOT ACCEPTABLE [FOR NOW]
+          -- DOING NOTHING
+          pure $ mkStep $ Step node state (patchMicroapp fnObject) (haltMicroapp fnObject)
     _ → do
       EFn.runEffectFn1 (haltMicroapp fnObject) state
       EFn.runEffectFn1 build vdom
