@@ -14,13 +14,12 @@ import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
-import Effect (Effect)
 import Effect.Uncurried as EFn
 import Foreign (Foreign)
 import Foreign.Object as Object
 import Halogen.VDom.Machine (Machine, Step, Step'(..), extract, halt, mkStep, step, unStep)
 import Halogen.VDom.Machine as Machine
-import Halogen.VDom.Types (ElemName(..), FnObject(..), Namespace(..), VDom(..), runGraft)
+import Halogen.VDom.Types (ElemName(..), FnObject, Namespace(..), VDom(..), runGraft)
 import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOMElement

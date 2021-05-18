@@ -34,13 +34,11 @@ module Halogen.VDom.Util
   , removeProperty
   , JsUndefined
   , jsUndefined
-  , generateUUID
   ) where
 
 import Prelude
 
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe)
 import Data.Nullable (Nullable)
 import Effect (Effect)
 import Effect.Uncurried as EFn
@@ -50,7 +48,6 @@ import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
 import Halogen.VDom.Types (ElemName, Namespace, FnObject)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
