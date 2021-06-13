@@ -91,10 +91,11 @@ exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
 
 exports.strMapWithIxE = function (as, fk, f) {
   var o = {};
+  var m = {};
   for (var i = 0; i < as.length; i++) {
     var a = as[i];
     var k = fk(a);
-    o[k] = f(k, i, a);
+    o[k] = f(k, i, m, a);
   }
   return o;
 };
@@ -122,14 +123,17 @@ exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
 exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) {
   var removedProps = [];
   var o2 = {};
+  var updatedProps = {}
   var replace = false;
+  if(el.type == "listView")
+    debugger;
   for (var i = 0; i < as.length; i++) {
     var a = as[i];
     var k = fk(a);
     if (o1.hasOwnProperty(k)) {
-      o2[k] = f1(k, i, o1[k], a);
+      o2[k] = f1(k, i, updatedProps, o1[k], a);
     } else {
-      o2[k] = f3(k, i, a);
+      o2[k] = f3(k, i, updatedProps, a);
     }
   }
   for (var k in o1) {
@@ -140,8 +144,11 @@ exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) 
     f2(k, o1[k]);
     removedProps.push(k);
   }
-  if (replace)
+  if (replace) {
     fnObject.replaceView(el, removedProps);
+  } else if(Object.keys(updatedProps).length > 0) {
+    fnObject.updateProperties(el, updatedProps);
+  }
   return o2;
 };
 

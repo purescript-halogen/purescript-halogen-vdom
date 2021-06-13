@@ -243,7 +243,7 @@ buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
   el ← EFn.runEffectFn3 Util.createElement spec.fnObject (toNullable ns1) name1
   let
     node = DOMElement.toNode el
-    onChild = EFn.mkEffectFn3 \k ix (Tuple _ vdom) → do
+    onChild = EFn.mkEffectFn4 \k ix _ (Tuple _ vdom) → do
       res ← EFn.runEffectFn1 build vdom
       EFn.runEffectFn5 Util.insertChildIx spec.fnObject "render" ix (extract res) node
       pure res

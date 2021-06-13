@@ -80,6 +80,7 @@ buildProp emit fnObject el = renderProp
   where
   renderProp = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
+    props ← Util.newMutMap
     ps1' ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp "render" events)
     let
       state =
@@ -113,7 +114,7 @@ buildProp emit fnObject el = renderProp
     Just a → emit a
     _ → pure unit
 
-  applyProp pr events = EFn.mkEffectFn3 \_ _ v →
+  applyProp pr events = EFn.mkEffectFn4 \_ _ props v →
     case v of
       Attribute ns attr val → do
         EFn.runEffectFn4 Util.setAttribute (toNullable ns) attr val el
@@ -121,7 +122,7 @@ buildProp emit fnObject el = renderProp
       Property prop val → do
         case pr of
              "render" -> EFn.runEffectFn3 setProperty prop val el
-             _ -> EFn.runEffectFn3 addProperty prop val el
+             _ -> EFn.runEffectFn3 Util.unsafeSetAny prop val props
         pure v
       Handler (DOM.EventType ty) f → do
         case Fn.runFn2 Util.unsafeGetAny ty events of
@@ -149,7 +150,7 @@ buildProp emit fnObject el = renderProp
             -- TODO ADD UPDATE_ORDER :: THIS LOOKS USELESS TO BE HONEST
         pure v
 
-  diffProp = Fn.mkFn2 \prevEvents events → EFn.mkEffectFn4 \_ _ v1 v2 →
+  diffProp = Fn.mkFn2 \prevEvents events → EFn.mkEffectFn5 \_ _ props v1 v2 →
     case v1, v2 of
       Attribute _ _ val1, Attribute ns2 attr2 val2 →
         if val1 == val2
@@ -166,15 +167,16 @@ buildProp emit fnObject el = renderProp
             if Fn.runFn2 Util.refEq elVal val2
               then pure v2
               else do
-                EFn.runEffectFn3 updateProperty prop2 val2 el
+                EFn.runEffectFn3 Util.unsafeSetAny prop2 val2 props
                 pure v2
           _, _ → do
-            EFn.runEffectFn3 updateProperty prop2 val2 el
+            EFn.runEffectFn3 Util.unsafeSetAny prop2 val2 props
             pure v2
       Payload val1, Payload val2 →
         if Fn.runFn2 Util.refEq val1 val2
           then pure v2
           else do
+            EFn.runEffectFn3 Util.unsafeSetAny "payload" val2 props
             EFn.runEffectFn3 updateMicroAppPayload val2 el true
             pure v2
       Handler _ _, Handler (DOM.EventType ty) f → do

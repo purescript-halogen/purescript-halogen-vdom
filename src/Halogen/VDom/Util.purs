@@ -137,24 +137,24 @@ foreign import diffWithKeyAndIxE
       (Object.Object c)
 
 foreign import diffPropWithKeyAndIxE
-  ∷ ∀ a b c d el
+  ∷ ∀ a b c d e el
   . EFn.EffectFn8
       FnObject
       (Object.Object a)
       (Array b)
       (b → String)
-      (EFn.EffectFn4 String Int a b c)
+      (EFn.EffectFn5 String Int e a b c)
       (EFn.EffectFn2 String a d)
-      (EFn.EffectFn3 String Int b c)
+      (EFn.EffectFn4 String Int e b c)
       el
       (Object.Object c)
 
 foreign import strMapWithIxE
-  ∷ ∀ a b
+  ∷ ∀ a b c
   . EFn.EffectFn3
       (Array a)
       (a → String)
-      (EFn.EffectFn3 String Int a b)
+      (EFn.EffectFn4 String Int a c b)
       (Object.Object b)
 
 foreign import refEq
