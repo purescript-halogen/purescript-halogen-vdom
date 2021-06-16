@@ -196,16 +196,16 @@ patchElem fnObject = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState (patchElem fnObject) (haltElem fnObject)
         _, _ → do
           let
-            onThese = EFn.mkEffectFn3 \ix s v → do
+            onThese = EFn.mkEffectFn4 \obj ix s v → do
               res ← EFn.runEffectFn2 step s v
-              EFn.runEffectFn5 Util.insertChildIx fnObject "patch" ix (extract res) node
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
               pure res
-            onThis = EFn.mkEffectFn2 \ix s → EFn.runEffectFn1 halt s
-            onThat = EFn.mkEffectFn2 \ix v → do
+            onThis = EFn.mkEffectFn3 \obj ix s → EFn.runEffectFn1 halt s
+            onThat = EFn.mkEffectFn3 \obj ix v → do
               res ← EFn.runEffectFn1 build v
-              EFn.runEffectFn5 Util.insertChildIx fnObject "patch" ix (extract res) node
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
               pure res
-          children2 ← EFn.runEffectFn5 Util.diffWithIxE ch1 ch2 onThese onThis onThat
+          children2 ← EFn.runEffectFn6 Util.diffWithIxE fnObject ch1 ch2 onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =
@@ -284,16 +284,16 @@ patchKeyed fnObject = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState (patchKeyed fnObject) (haltKeyed fnObject)
         _, len2 → do
           let
-            onThese = EFn.mkEffectFn4 \_ ix' s (Tuple _ v) → do
+            onThese = EFn.mkEffectFn5 \obj _ ix' s (Tuple _ v) → do
               res ← EFn.runEffectFn2 step s v
-              EFn.runEffectFn5 Util.insertChildIx fnObject "patch" ix' (extract res) node
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix' (extract res) node
               pure res
-            onThis = EFn.mkEffectFn2 \_ s → EFn.runEffectFn1 halt s
-            onThat = EFn.mkEffectFn3 \_ ix (Tuple _ v) → do
+            onThis = EFn.mkEffectFn3 \obj _ s → EFn.runEffectFn1 halt s
+            onThat = EFn.mkEffectFn4 \obj _ ix (Tuple _ v) → do
               res ← EFn.runEffectFn1 build v
-              EFn.runEffectFn5 Util.insertChildIx fnObject "patch" ix (extract res) node
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
               pure res
-          children2 ← EFn.runEffectFn6 Util.diffWithKeyAndIxE ch1 ch2 fst onThese onThis onThat
+          children2 ← EFn.runEffectFn7 Util.diffWithKeyAndIxE fnObject ch1 ch2 fst onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs as2
           let
             nextState =

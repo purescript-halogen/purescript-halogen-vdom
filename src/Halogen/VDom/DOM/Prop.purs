@@ -205,12 +205,6 @@ buildProp emit fnObject el = renderProp
          pure unit
       Payload _ -> pure unit
 
-  updateProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
-  updateProperty = fnObject.updateProperty
-
-  addProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
-  addProperty = fnObject.addProperty
-
   updateMicroAppPayload ∷ EFn.EffectFn3 String DOM.Element Boolean Unit
   updateMicroAppPayload = fnObject.updateMicroAppPayload
 

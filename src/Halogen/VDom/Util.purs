@@ -116,24 +116,26 @@ foreign import replicateE
       Unit
 
 foreign import diffWithIxE
-  ∷ ∀ b c d
-  . EFn.EffectFn5
+  ∷ ∀ a b c d
+  . EFn.EffectFn6
+      FnObject
       (Array b)
       (Array c)
-      (EFn.EffectFn3 Int b c d)
-      (EFn.EffectFn2 Int b Unit)
-      (EFn.EffectFn2 Int c d)
+      (EFn.EffectFn4 a Int b c d)
+      (EFn.EffectFn3 a Int b Unit)
+      (EFn.EffectFn3 a Int c d)
       (Array d)
 
 foreign import diffWithKeyAndIxE
-  ∷ ∀ a b c d
-  . EFn.EffectFn6
+  ∷ ∀ a b c d e
+  . EFn.EffectFn7
+      FnObject
       (Object.Object a)
       (Array b)
       (b → String)
-      (EFn.EffectFn4 String Int a b c)
-      (EFn.EffectFn2 String a d)
-      (EFn.EffectFn3 String Int b c)
+      (EFn.EffectFn5 String e Int a b c)
+      (EFn.EffectFn3 String e a d)
+      (EFn.EffectFn4 String e Int b c)
       (Object.Object c)
 
 foreign import diffPropWithKeyAndIxE
@@ -175,10 +177,10 @@ foreign import createMicroapp
 foreign import generateUUID :: Effect String
 
 foreign import insertChildIx
-  ∷ EFn.EffectFn5 FnObject String Int DOM.Node DOM.Node Unit
+  ∷ forall a. EFn.EffectFn5 a String Int DOM.Node DOM.Node Unit
 
 foreign import removeChild
-  ∷ EFn.EffectFn3 FnObject DOM.Node DOM.Node Unit
+  ∷ forall a. EFn.EffectFn3 a DOM.Node DOM.Node Unit
 
 foreign import parentNode
   ∷ EFn.EffectFn1 DOM.Node DOM.Node

@@ -98,12 +98,9 @@ derive newtype instance ordNamespace ∷ Ord Namespace
 type FnObject =
   { replaceView :: forall a . EFn.EffectFn2 a (Array String) Unit
   , setManualEvents :: forall a b. a -> b -> Effect Unit
-  , addChild :: forall a b. EFn.EffectFn3 a b Int Unit
-  , moveChild :: forall a b. EFn.EffectFn3 a b Int Unit
+  , updateChildren :: forall a. EFn.EffectFn1 a Unit
   , removeChild :: forall a b. EFn.EffectFn3 a b Int Unit
   , createPrestoElement:: forall a. Effect a
-  , addProperty :: ∀ a b. EFn.EffectFn3 String a b Unit
-  , updateProperty :: ∀ a b. EFn.EffectFn3 String a b Unit
   , cancelBehavior :: EFn.EffectFn1 String Unit
   , manualEventsName :: Array String
   , updateMicroAppPayload :: ∀ b. EFn.EffectFn3 String b Boolean Unit

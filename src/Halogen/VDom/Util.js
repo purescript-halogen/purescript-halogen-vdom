@@ -67,7 +67,8 @@ exports.replicateE = function (n, f) {
   }
 };
 
-exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
+exports.diffWithIxE = function (fnObject, a1, a2, f1, f2, f3) {
+  var actions = [];
   var a3 = [];
   var l1 = a1.length;
   var l2 = a2.length;
@@ -75,16 +76,19 @@ exports.diffWithIxE = function (a1, a2, f1, f2, f3) {
   while (1) {
     if (i < l1) {
       if (i < l2) {
-        a3.push(f1(i, a1[i], a2[i]));
+        a3.push(f1(actions, i, a1[i], a2[i]));
       } else {
-        f2(i, a1[i]);
+        f2(actions, i, a1[i]);
       }
     } else if (i < l2) {
-      a3.push(f3(i, a2[i]));
+      a3.push(f3(actions, i, a2[i]));
     } else {
       break;
     }
     i++;
+  }
+  if(actions.length > 0) {
+    fnObject.updateChildren(actions);
   }
   return a3;
 };
@@ -100,22 +104,26 @@ exports.strMapWithIxE = function (as, fk, f) {
   return o;
 };
 
-exports.diffWithKeyAndIxE = function (o1, as, fk, f1, f2, f3) {
+exports.diffWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3) {
   var o2 = {};
+  var actions = [];
   for (var i = 0; i < as.length; i++) {
     var a = as[i];
     var k = fk(a);
     if (o1.hasOwnProperty(k)) {
-      o2[k] = f1(k, i, o1[k], a);
+      o2[k] = f1(actions, k, i, o1[k], a);
     } else {
-      o2[k] = f3(k, i, a);
+      o2[k] = f3(actions, k, i, a);
     }
   }
   for (var k in o1) {
     if (k in o2) {
       continue;
     }
-    f2(k, o1[k]);
+    f2(actions, k, o1[k]);
+  }
+  if(actions.length > 0) {
+    fnObject.updateChildren(actions);
   }
   return o2;
 };
@@ -125,8 +133,6 @@ exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) 
   var o2 = {};
   var updatedProps = {}
   var replace = false;
-  if(el.type == "listView")
-    debugger;
   for (var i = 0; i < as.length; i++) {
     var a = as[i];
     var k = fk(a);
@@ -172,9 +178,8 @@ exports.createMicroapp = function (fnObject, requestId, service ) {
   return {type: "microapp", children: [], props: {}, requestId : requestId, __ref: fnObject.createPrestoElement(), service : service};
 };
 
-exports.insertChildIx = function (fnObject, type, i, a, b) {
+exports.insertChildIx = function (obj, type, i, a, b) {
   var n = (b.children[i]) || {__ref: {__id: "-1"}};
-
   if (!a)
     console.warn("CUSTOM VDOM ERROR !! : ", "Trying to add undefined element to ", b);
 
@@ -192,9 +197,9 @@ exports.insertChildIx = function (fnObject, type, i, a, b) {
   var index = b.children.indexOf(a);
   if (index !== -1) {
     b.children.splice(index, 1);
-    fnObject.moveChild(a, b, i);
+    obj.push({action : "move", parent : b, elem : a, index : i})
   } else {
-    fnObject.addChild(a, b ,i);
+    obj.push({action : "add", parent : b, elem : a, index : i})
   }
   b.children.splice(i, 0, a);
   a.parentNode = b;
