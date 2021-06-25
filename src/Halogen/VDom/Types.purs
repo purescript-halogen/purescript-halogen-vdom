@@ -105,5 +105,6 @@ type FnObject =
   , manualEventsName :: Array String
   , updateMicroAppPayload :: ∀ b. EFn.EffectFn3 String b Boolean Unit
   , updateProperties :: forall a b. EFn.EffectFn2 a b Unit
+  , parseParams :: forall a b c d. EFn.EffectFn3 a b c d
   }
 

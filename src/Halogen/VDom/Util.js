@@ -158,6 +158,26 @@ exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) 
   return o2;
 };
 
+exports.diffArrayOfObjects = function (fnObject, listState, el, oldArray, newArray, updatedProps) {
+  // TODO :: Optimise with old Array + list State in the future;
+  var hasDiff = false
+  if(oldArray.length != newArray.length) {
+    hasDiff = true;
+  }
+  for(var j = 0; j < newArray.length; ++j) {
+    for(var key in newArray[j]) {
+      hasDiff = newArray[j][key] != oldArray[j][key];
+      if(hasDiff)
+        break;
+    }
+    if(hasDiff)
+      break;
+  }
+  if(hasDiff) {
+    updatedProps.listData = newArray
+  }
+}
+
 exports.refEq = function (a, b) {
   return a === b;
 };

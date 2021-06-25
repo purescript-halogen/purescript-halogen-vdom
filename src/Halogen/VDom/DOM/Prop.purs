@@ -11,6 +11,7 @@ module Halogen.VDom.DOM.Prop
 
 import Prelude
 
+import Data.Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)
@@ -39,6 +40,8 @@ data Prop a
   | Ref (ElemRef DOM.Element → Maybe a)
   | BHandler String (Unit -> Maybe a)
   | Payload String
+  | Nopatch String PropValue
+  | ListData (Array (Object.Object PropValue))
 
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
@@ -81,19 +84,21 @@ buildProp emit fnObject el = renderProp
   renderProp = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
     props ← Util.newMutMap
+    listData ← Util.newMutMap
     ps1' ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp "render" events)
     let
       state =
         { events: Util.unsafeFreeze events
         , props: ps1'
+        , listData : Util.unsafeFreeze listData
         }
     pure $ mkStep $ Step unit state patchProp haltProp
 
   patchProp = EFn.mkEffectFn2 \state ps2 → do
     events ← Util.newMutMap
     let
-      { events: prevEvents, props: ps1 } = state
-      onThese = Fn.runFn2 diffProp prevEvents events
+      { events: prevEvents, props: ps1, listData : prevListData } = state
+      onThese = Fn.runFn3 diffProp prevEvents events prevListData
       onThis = removeProp prevEvents
       onThat = applyProp "patch" events
     props ← EFn.runEffectFn8 Util.diffPropWithKeyAndIxE fnObject ps1 ps2 propToStrKey onThese onThis onThat el
@@ -101,6 +106,7 @@ buildProp emit fnObject el = renderProp
       nextState =
         { events: Util.unsafeFreeze events
         , props
+        , listData : prevListData
         }
     pure $ mkStep $ Step unit nextState patchProp haltProp
 
@@ -120,6 +126,11 @@ buildProp emit fnObject el = renderProp
         EFn.runEffectFn4 Util.setAttribute (toNullable ns) attr val el
         pure v
       Property prop val → do
+        case pr of
+             "render" -> EFn.runEffectFn3 setProperty prop val el
+             _ -> EFn.runEffectFn3 Util.unsafeSetAny prop val props
+        pure v
+      Nopatch prop val → do
         case pr of
              "render" -> EFn.runEffectFn3 setProperty prop val el
              _ -> EFn.runEffectFn3 Util.unsafeSetAny prop val props
@@ -149,8 +160,19 @@ buildProp emit fnObject el = renderProp
           _ -> EFn.runEffectFn3 updateMicroAppPayload payload el true
             -- TODO ADD UPDATE_ORDER :: THIS LOOKS USELESS TO BE HONEST
         pure v
+      ListData ld -> do
+        -- Create Run In UI for all props and add to some sort of state
+        -- _ <- case pr of
+        --   "render" -> 
+                -- Call setProp with the final recieved value
+        --   _ -> 
+                -- Call unsafeSetAny with the final recieved value
+        _ <- case pr of
+          "render" -> EFn.runEffectFn3 setProperty "listData" (unsafeCoerce ld) el
+          _ -> EFn.runEffectFn3 Util.unsafeSetAny "listData" (unsafeCoerce ld) props
+        pure v
 
-  diffProp = Fn.mkFn2 \prevEvents events → EFn.mkEffectFn5 \_ _ props v1 v2 →
+  diffProp = Fn.mkFn3 \prevEvents events listState → EFn.mkEffectFn5 \_ _ props v1 v2 →
     case v1, v2 of
       Attribute _ _ val1, Attribute ns2 attr2 val2 →
         if val1 == val2
@@ -185,6 +207,13 @@ buildProp emit fnObject el = renderProp
         Ref.write f (snd handler)
         EFn.runEffectFn3 Util.pokeMutMap ty handler events
         pure v2
+      ListData ld1, ListData ld2 -> do
+        -- diff;
+          -- Call parseParams for new props
+          -- Call removeProp for old props
+          -- Merge all runInUI props
+        EFn.runEffectFn6 Util.diffArrayOfObjects fnObject listState el ld1 ld2 props
+        pure v2
       _, _ →
         pure v2
 
@@ -194,6 +223,10 @@ buildProp emit fnObject el = renderProp
         EFn.runEffectFn3 Util.removeAttribute (toNullable ns) attr el
       Property prop _ →
         EFn.runEffectFn2 removeProperty prop el
+      Nopatch prop _ →
+        EFn.runEffectFn2 removeProperty prop el
+      ListData _ →
+        EFn.runEffectFn2 removeProperty "listData" el
       Handler (DOM.EventType ty) _ → do
         let
           handler = Fn.runFn2 Util.unsafeLookup ty prevEvents
@@ -213,10 +246,12 @@ propToStrKey = case _ of
   Attribute (Just (Namespace ns)) attr _ → "attr/" <> ns <> ":" <> attr
   Attribute _ attr _ → "attr/:" <> attr
   Property prop _ → "prop/" <> prop
+  Nopatch prop _ → "prop/" <> prop
   Handler (DOM.EventType ty) _ → "handler/" <> ty
   Ref _ → "ref"
   BHandler ty _ -> "bhandler/" <> ty
   Payload _ -> "payload"
+  ListData _ → "prop/listData"
 
 setProperty ∷ EFn.EffectFn3 String PropValue DOM.Element Unit
 setProperty = Util.unsafeSetProp

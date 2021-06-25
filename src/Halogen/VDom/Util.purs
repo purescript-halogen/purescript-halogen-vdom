@@ -17,6 +17,7 @@ module Halogen.VDom.Util
   , diffWithIxE
   , diffWithKeyAndIxE
   , diffPropWithKeyAndIxE
+  , diffArrayOfObjects
   , strMapWithIxE
   , refEq
   , createTextNode
@@ -42,6 +43,7 @@ import Data.Function.Uncurried as Fn
 import Data.Nullable (Nullable)
 import Effect (Effect)
 import Effect.Uncurried as EFn
+import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
@@ -150,6 +152,18 @@ foreign import diffPropWithKeyAndIxE
       (EFn.EffectFn4 String Int e b c)
       el
       (Object.Object c)
+
+foreign import diffArrayOfObjects
+  ∷ ∀ a b p el
+  . EFn.EffectFn6
+      FnObject
+      (Object a)
+      el
+      (Array (Object p))
+      (Array (Object p))
+      b
+      Unit
+      -- (Array (Object p))
 
 foreign import strMapWithIxE
   ∷ ∀ a b c
