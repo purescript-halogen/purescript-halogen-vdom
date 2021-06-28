@@ -275,7 +275,7 @@ exports.addEventListener = function (fnObject, pr, ev, listener, el) {
       (typeof fnObject.setManualEvents == "function") &&
       (fnObject.manualEventsName.indexOf(ev) != -1)
     ){
-      fnObject.setManualEvents(ev)(listener);
+      fnObject.setManualEvents(ev)(listener)();
     }
   } catch(err){
     console.error("Error while checking for manualEvents \n",err);
