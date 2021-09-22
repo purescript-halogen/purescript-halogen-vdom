@@ -11,7 +11,6 @@ module Halogen.VDom.DOM.Prop
 
 import Prelude
 
-import Data.Array
 import Data.Function.Uncurried as Fn
 import Data.Maybe (Maybe(..))
 import Data.Nullable (toNullable)

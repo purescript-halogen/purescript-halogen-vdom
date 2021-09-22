@@ -11,7 +11,7 @@ import Prelude
 
 import Data.Array as Array
 import Data.Function.Uncurried as Fn
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Nullable (toNullable)
 import Data.Tuple (Tuple(..), fst)
 import Effect.Uncurried as EFn
@@ -34,6 +34,8 @@ type VDomInit i a w = EFn.EffectFn1 i (VDomStep a w)
 type VDomBuilder i a w = EFn.EffectFn3 (VDomSpec a w) (VDomMachine a w) i (VDomStep a w)
 
 type VDomBuilder4 i j k l a w = EFn.EffectFn6 (VDomSpec a w) (VDomMachine a w) i j k l (VDomStep a w)
+
+type VDomBuilder5 i j a w ch = EFn.EffectFn5 (VDomSpec a w) (VDomMachine a w) i j ch (VDomStep a w)
 
 type VDomBuilder6 i j a w = EFn.EffectFn4 (VDomSpec a w) (VDomMachine a w) i j (VDomStep a w)
 
@@ -63,7 +65,7 @@ buildVDom spec = build
     Keyed ns n a ch → EFn.runEffectFn6 buildKeyed spec build ns n a ch
     Widget w → EFn.runEffectFn3 buildWidget spec build w
     Grafted g → EFn.runEffectFn1 build (runGraft g)
-    Microapp s g → EFn.runEffectFn4 buildMicroapp spec build s g -- TODO fix
+    Microapp s g ch → EFn.runEffectFn5 buildMicroapp spec build s g ch
 
 type MicroAppState a w =
   { build ∷ VDomMachine a w
@@ -72,31 +74,48 @@ type MicroAppState a w =
   , attrs ∷ Step a Unit
   , service :: String
   , payload :: Maybe Foreign
+  , children :: Array (VDomStep a w)
   }
 
-buildMicroapp ∷ ∀ a w. VDomBuilder6 String a a w
-buildMicroapp = EFn.mkEffectFn4 \(VDomSpec spec) build s as1 → do
+buildMicroapp ∷ ∀ a w. VDomBuilder5 String a a w (Maybe (Array (VDom a w)))
+buildMicroapp = EFn.mkEffectFn5 \(VDomSpec spec) build s as1 ch → do
   -- GET ID, SCHEDULE AN AFTER RENDER CALL TO M-APP
   -- MAYBE ADD A FUNCTION FROM PRESTO_DOM TO SCHEDULE
   requestId <- Util.generateUUID
   el ← EFn.runEffectFn3 Util.createMicroapp spec.fnObject requestId s
   let node = DOMElement.toNode el
   attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
-  let state = { build, node, service: s, attrs, requestId : requestId, payload : Nothing }
+  let onChild = EFn.mkEffectFn2 \ix child → do
+                res ← EFn.runEffectFn1 build child
+                EFn.runEffectFn5 Util.insertChildIx spec.fnObject "render" ix (extract res) node
+                pure res
+  children ← EFn.runEffectFn2 Util.forE (fromMaybe [] ch) onChild
+  let state = { build, node, service: s, attrs, requestId : requestId, payload : Nothing, children }
   pure $ mkStep $ Step node state (patchMicroapp spec.fnObject) (haltMicroapp spec.fnObject)
 
 patchMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn2 (MicroAppState a w) (VDom a w) (VDomStep a w)
 patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
-  let { build, node, attrs, service: value1, requestId, payload} = state
+  let { build, node, attrs, service: value1, requestId, payload, children : ch1} = state
   case vdom of
     Grafted g →
       EFn.runEffectFn2 (patchMicroapp fnObject) state (runGraft g)
-    Microapp s value2 -- CHANGE IN PAYLOAD, NEEDS TO TERMINATE OLD / FIRE EVENT TO OTHER M_APP
-      | value1 == s → do
+    Microapp s2 value2 ch2 -- CHANGE IN PAYLOAD, NEEDS TO TERMINATE OLD / FIRE EVENT TO OTHER M_APP
+      | value1 == s2 → do
+          let
+            onThese = EFn.mkEffectFn4 \obj ix s v → do
+              res ← EFn.runEffectFn2 step s v
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              pure res
+            onThis = EFn.mkEffectFn3 \obj ix s → EFn.runEffectFn1 halt s
+            onThat = EFn.mkEffectFn3 \obj ix v → do
+              res ← EFn.runEffectFn1 build v
+              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              pure res
+          children2 ← EFn.runEffectFn6 Util.diffWithIxE fnObject ch1 (fromMaybe [] ch2) onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs value2
-          pure $ mkStep $ Step node (state {attrs = attrs2}) (patchMicroapp fnObject) (haltMicroapp fnObject)
+          pure $ mkStep $ Step node (state {attrs = attrs2, children= children2}) (patchMicroapp fnObject) (haltMicroapp fnObject)
       | otherwise → do
-          -- NOT HANDLED THIS IS DUMMY CODE 
+          -- NOT HANDLED THIS IS DUMMY CODE
           -- CASE WHERE SERVICE CHANGES IS NOT ACCEPTABLE [FOR NOW]
           -- DOING NOTHING
           pure $ mkStep $ Step node state (patchMicroapp fnObject) (haltMicroapp fnObject)
@@ -105,9 +124,11 @@ patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
       EFn.runEffectFn1 build vdom
 
 haltMicroapp ∷ ∀ a w. FnObject -> EFn.EffectFn1 (MicroAppState a w) Unit
-haltMicroapp fnObject = EFn.mkEffectFn1 \{ node } → do
+haltMicroapp fnObject = EFn.mkEffectFn1 \{ node, attrs, children } → do
   parent ← EFn.runEffectFn1 Util.parentNode node
   EFn.runEffectFn3 Util.removeChild fnObject node parent
+  EFn.runEffectFn2 Util.forEachE children halt
+  EFn.runEffectFn1 halt attrs
 
 type TextState a w =
   { build ∷ VDomMachine a w

@@ -14,7 +14,7 @@ import Prelude
 import Effect (Effect)
 import Effect.Uncurried as EFn
 import Data.Bifunctor (class Bifunctor, bimap)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple)
 import Unsafe.Coerce (unsafeCoerce)
@@ -31,7 +31,7 @@ data VDom a w
   | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
-  | Microapp String a
+  | Microapp String a (Maybe (Array (VDom a w)))
 
 instance functorVDom ∷ Functor (VDom a) where
   map g (Text a) = Text a
@@ -79,7 +79,10 @@ runGraft =
       go (Keyed ns n a ch) = Keyed ns n (fa a) (map (map go) ch)
       go (Widget w) = Widget (fw w)
       go (Grafted g) = Grafted (bimap fa fw g)
-      go (Microapp s a) = Microapp s (fa a)
+      go (Microapp s a child) = Microapp s (fa a) $
+        case child of
+          Just ch -> (Just $ map go ch)
+          _ -> Nothing
     in
       go v
 

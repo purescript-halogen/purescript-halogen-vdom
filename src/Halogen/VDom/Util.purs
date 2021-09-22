@@ -43,7 +43,6 @@ import Data.Function.Uncurried as Fn
 import Data.Nullable (Nullable)
 import Effect (Effect)
 import Effect.Uncurried as EFn
-import Foreign (Foreign)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
