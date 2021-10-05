@@ -163,15 +163,16 @@ exports.diffArrayOfObjects = function (fnObject, listState, el, oldArray, newArr
   var hasDiff = false
   if(oldArray.length != newArray.length) {
     hasDiff = true;
-  }
-  for(var j = 0; j < newArray.length; ++j) {
-    for(var key in newArray[j]) {
-      hasDiff = newArray[j][key] != oldArray[j][key];
+  } else {
+    for(var j = 0; j < newArray.length; ++j) {
+      for(var key in newArray[j]) {
+        hasDiff = newArray[j][key] != oldArray[j][key];
+        if(hasDiff)
+          break;
+      }
       if(hasDiff)
         break;
     }
-    if(hasDiff)
-      break;
   }
   if(hasDiff) {
     updatedProps.listData = newArray
