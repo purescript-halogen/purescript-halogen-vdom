@@ -68,6 +68,7 @@ exports.replicateE = function (n, f) {
 };
 
 exports.diffWithIxE = function (fnObject, a1, a2, f1, f2, f3) {
+  // console.log("This fails in chunking because:", fnObject, a1, a2, f1, f2, f3);
   var actions = [];
   var a3 = [];
   var l1 = a1.length;
@@ -195,11 +196,16 @@ exports.createElement = function (fnObject, ns, name) {
   return {type: name, children: [], props: {}, __ref: fnObject.createPrestoElement()};
 };
 
+exports.createChunkedElement = function(fnObject, ns, name) {
+  return {type: name, chunkedLayout: true, children: [], layouts: [], props: {}, __ref: fnObject.createPrestoElement()};
+}
+
 exports.createMicroapp = function (fnObject, requestId, service ) {
   return {type: "microapp", children: [], props: {}, requestId : requestId, __ref: fnObject.createPrestoElement(), service : service};
 };
 
 exports.insertChildIx = function (obj, type, i, a, b) {
+  // console.log("insertChildIx halogen:", obj, type, i, a, b);
   var n = (b.children[i]) || {__ref: {__id: "-1"}};
   if (!a)
     console.warn("CUSTOM VDOM ERROR !! : ", "Trying to add undefined element to ", b);
@@ -225,6 +231,63 @@ exports.insertChildIx = function (obj, type, i, a, b) {
   b.children.splice(i, 0, a);
   a.parentNode = b;
 };
+
+exports.insertChunkIx = function(obj, opType, index, child, parentNode) {
+  console.log("InsertChunkIx halogen:", obj, opType, index, child, parentNode);
+  var n = (parentNode.children[index]) || {__ref: {__id: "-1"}};
+  if (!child)
+    console.warn("CUSTOM VDOM ERROR !! : ", "Trying to add undefined element to ", parentNode);
+
+  if (n === child) {
+    return;
+  }
+
+  if (opType !== "patch") {
+    child.layout.parentNode = child.shimmer.parentNode = parentNode;
+    parentNode.children.splice(index, 0, child.shimmer);
+    parentNode.layouts.splice(index, 0, child.layout);
+    return;
+  }
+  debugger;
+  // no shimmers beyond this point
+  // treat it like Elem, ignore shimmer
+  var childPos = parentNode.layouts.findIndex(function(e) { e.__ref.__id === child.layout.__ref.__id });
+  if (childPos !== -1) {
+    parentNode.children.splice(childPos, 1);
+    obj.push({action : "move", parent : parentNode, elem : child.layout, index : childPos})
+  } else {
+    obj.push({action : "add", parent : parentNode, elem : child.layout, index : childPos})
+  }
+  parentNode.children.splice(index, 0, child.shimmer);
+  child.layout.parentNode = parentNode;
+}
+
+exports.diffChunkWithIxE = function(fnObject, a1, a2, f1, f2, f3) {
+  console.log("shimmer chunk:", fnObject, a1, a2, f1, f2, f3);
+  var actions = [];
+  var a3 = [];
+  var l1 = a1.length;
+  var l2 = a2.length;
+  var i  = 0;
+  while (1) {
+    if (i < l1) {
+      if (i < l2) {
+        a3.push(f1(actions, i, a1[i].shimmer, a2[i]));
+      } else {
+        f2(actions, i, a1[i].shimmer);
+      }
+    } else if (i < l2) {
+      a3.push(f3(actions, i, a2[i]));
+    } else {
+      break;
+    }
+    i++;
+  }
+  if(actions.length > 0) {
+    fnObject.updateChildren(actions);
+  }
+  return a3;
+}
 
 exports.removeChild = function (fnObject, a, b) {
   var childIndex = -1;

@@ -25,6 +25,7 @@ module Halogen.VDom.Util
   , createElement
   , createMicroapp
   , insertChildIx
+  , insertChunkIx
   , generateUUID
   , removeChild
   , parentNode
@@ -35,6 +36,8 @@ module Halogen.VDom.Util
   , removeProperty
   , JsUndefined
   , jsUndefined
+  , createChunkedElement
+  , diffChunkWithIxE
   ) where
 
 import Prelude
@@ -47,7 +50,8 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (ElemName, Namespace, FnObject)
+import Halogen.VDom.Types (ElemName, FnObject, Namespace, ShimmerHolder, VDom(..))
+import Halogen.VDom.Machine (Step)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
@@ -152,6 +156,18 @@ foreign import diffPropWithKeyAndIxE
       el
       (Object.Object c)
 
+foreign import diffChunkWithIxE
+  ∷ ∀ a b c d e
+  . EFn.EffectFn6
+      FnObject
+      (Array b)
+      (Array c)
+      (EFn.EffectFn4 a Int e c d)
+      (EFn.EffectFn3 a Int e Unit)
+      (EFn.EffectFn3 a Int c d)
+      (Array d)
+
+
 foreign import diffArrayOfObjects
   ∷ ∀ a b p el
   . EFn.EffectFn6
@@ -184,6 +200,9 @@ foreign import setTextContent
 foreign import createElement
   ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
 
+foreign import createChunkedElement
+  ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
+
 foreign import createMicroapp
   ∷ EFn.EffectFn3 FnObject String String DOM.Element
 
@@ -191,6 +210,9 @@ foreign import generateUUID :: Effect String
 
 foreign import insertChildIx
   ∷ forall a. EFn.EffectFn5 a String Int DOM.Node DOM.Node Unit
+
+foreign import insertChunkIx
+  ∷ forall a. EFn.EffectFn5 a String Int ({ shimmer :: DOM.Node, layout :: DOM.Node }) DOM.Node Unit
 
 foreign import removeChild
   ∷ forall a. EFn.EffectFn3 a DOM.Node DOM.Node Unit

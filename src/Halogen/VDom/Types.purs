@@ -8,6 +8,8 @@ module Halogen.VDom.Types
   , ElemName(..)
   , Namespace(..)
   , FnObject(..)
+  , ShimmerHolder(..)
+  , ShimmerItem(..)
   ) where
 
 import Prelude
@@ -28,6 +30,7 @@ import Unsafe.Coerce (unsafeCoerce)
 data VDom a w
   = Text String
   | Elem (Maybe Namespace) ElemName a (Array (VDom a w))
+  | Chunk (Maybe Namespace) ElemName a (ShimmerHolder a w)
   | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
@@ -83,8 +86,15 @@ runGraft =
         case child of
           Just ch -> (Just $ map go ch)
           _ -> Nothing
+      go (Chunk ns n a ch) = Chunk ns n (fa a) (chunkMap go ch)
     in
       go v
+
+chunkMap :: forall a a' w w'. (VDom a w -> VDom a' w') -> ShimmerHolder a w -> ShimmerHolder a' w'
+chunkMap go shimHolder = map (shimmerItemMap go) shimHolder
+
+shimmerItemMap :: forall a a' w w'. (VDom a w -> VDom a' w') -> ShimmerItem a w -> ShimmerItem a' w'
+shimmerItemMap go item = { shimmer : (go item.shimmer) , actualLayout : (go item.actualLayout) }
 
 newtype ElemName = ElemName String
 
@@ -98,6 +108,13 @@ derive instance newtypeNamespace ∷ Newtype Namespace _
 derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
 
+type ShimmerHolder a w = Array (ShimmerItem a w)
+
+type ShimmerItem a w = 
+  { shimmer :: VDom a w 
+  , actualLayout :: VDom a w
+  }
+
 type FnObject =
   { replaceView :: forall a . EFn.EffectFn2 a (Array String) Unit
   , setManualEvents :: forall a b. a -> b -> Effect Unit
@@ -110,4 +127,3 @@ type FnObject =
   , updateProperties :: forall a b. EFn.EffectFn2 a b Unit
   , parseParams :: forall a b c d. EFn.EffectFn3 a b c d
   }
-
