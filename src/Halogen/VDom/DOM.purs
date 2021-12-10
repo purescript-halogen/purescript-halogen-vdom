@@ -24,7 +24,6 @@ import Halogen.VDom.Util as Util
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Element as DOMElement
 import Web.DOM.Node (Node) as DOM
-import Debug.Trace (spy)
 
 type VDomMachine a w = Machine (VDom a w) DOM.Node
 
@@ -429,11 +428,11 @@ patchChunk fnObject = EFn.mkEffectFn2 \state vdom → do
         _, _ → do
           let
             onThese = EFn.mkEffectFn4 \obj ix s v → do
-              res1 ← EFn.runEffectFn2 step s v.shimmer
+              -- res1 ← EFn.runEffectFn2 step s v.shimmer
               res2 ← EFn.runEffectFn2 step s v.actualLayout
-              let res = { shimmer: (extract res1), layout: (extract res2) }
+              let res = { shimmer: (extract s), layout: (extract res2) }
               EFn.runEffectFn5 Util.insertChunkIx obj "patch" ix res node
-              pure { shimmer: res1, layout: res2 }
+              pure { shimmer: s, layout: res2 }
             onThis = EFn.mkEffectFn3 \obj ix s → EFn.runEffectFn1 halt s
             onThat = EFn.mkEffectFn3 \obj ix v → do
               res1 ← EFn.runEffectFn1 build v.shimmer
@@ -459,15 +458,7 @@ patchChunk fnObject = EFn.mkEffectFn2 \state vdom → do
 
 haltChunk ∷ ∀ a w. FnObject -> EFn.EffectFn1 (ChunkState a w) Unit
 haltChunk fnObject = EFn.mkEffectFn1 \{ node, attrs, children } → do
-  let _ = spy "haltChunk" children
-      _ = spy "haltChunk" attrs
-      _ = spy "haltChunk" node
   pure unit
-  -- parent ← EFn.runEffectFn1 Util.parentNode node
-  -- EFn.runEffectFn3 Util.removeChild fnObject node parent
-  -- EFn.runEffectFn2 Util.forEachE children halt
-  -- EFn.runEffectFn1 halt attrs
-
 
 eqElemSpec ∷ Fn.Fn4 (Maybe Namespace) ElemName (Maybe Namespace) ElemName Boolean
 eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →
@@ -477,34 +468,4 @@ eqElemSpec = Fn.mkFn4 \ns1 (ElemName name1) ns2 (ElemName name2) →
       Nothing, Nothing → true
       _, _ → false
     else false
-
-
--- var onThis = function (obj, ix, s) {
---     return Halogen_VDom_Machine.halt(s);
--- };
--- var onThese = function (obj, ix, s, v2) {
---     var v3 = Halogen_VDom_Machine.step(s, v2.shimmer);
---     var v4 = Halogen_VDom_Machine.step(s, v2.actualLayout);
---     var res = {
---         shimmer: Halogen_VDom_Machine.extract(v3),
---         layout: Halogen_VDom_Machine.extract(v4)
---     };
---     Halogen_VDom_Util.insertChunkIx(obj, "patch", ix, res, state.node);
---     return {
---         shimmer: v3,
---         layout: v4
---     };
--- };
--- var onThat = function (obj, ix, v2) {
---     var v3 = state.build(v2.shimmer);
---     var v4 = state.build(v2.actualLayout);
---     var res = {
---         shimmer: Halogen_VDom_Machine.extract(v3),
---         layout: Halogen_VDom_Machine.extract(v4)
---     };
---     Halogen_VDom_Util.insertChunkIx(obj, "patch", ix, res, state.node);
---     return {
---         shimmer: v3,
---         layout: v4
---     };
--- };
+    
