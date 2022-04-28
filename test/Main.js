@@ -1,27 +1,27 @@
-exports.getData = function () {
+export function getData() {
   return ENV.generateData().toArray();
-};
+}
 
-exports.getTimeout = function () {
+export function getTimeout() {
   return ENV.timeout;
-};
+}
 
-exports.pingRenderRate = function () {
+export function pingRenderRate() {
   Monitoring.renderRate.ping();
-};
+}
 
-exports.setTimeout = function (ms) {
+export function setTimeout(ms) {
   return function (fn) {
     return function () {
       return setTimeout(fn, ms);
     };
   };
-};
+}
 
-exports.requestAnimationFrame = function (f) {
+export function requestAnimationFrame(f) {
   return function () {
     window.requestAnimationFrame(function () {
       f();
     });
   };
-};
+}
