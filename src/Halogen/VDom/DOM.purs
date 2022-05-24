@@ -88,7 +88,7 @@ buildMicroapp = EFn.mkEffectFn5 \(VDomSpec spec) build s as1 ch → do
   attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
   let onChild = EFn.mkEffectFn2 \ix child → do
                 res ← EFn.runEffectFn1 build child
-                EFn.runEffectFn5 Util.insertChildIx spec.fnObject "render" ix (extract res) node
+                EFn.runEffectFn6 Util.insertChildIx spec.fnObject "render" ix (extract res) node ""
                 pure res
   children ← EFn.runEffectFn2 Util.forE (fromMaybe [] ch) onChild
   let state = { build, node, service: s, attrs, requestId : requestId, payload : Nothing, children }
@@ -105,12 +105,12 @@ patchMicroapp fnObject = EFn.mkEffectFn2 \state vdom → do
           let
             onThese = EFn.mkEffectFn4 \obj ix s v → do
               res ← EFn.runEffectFn2 step s v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix (extract res) node ""
               pure res
             onThis = EFn.mkEffectFn3 \obj ix s → EFn.runEffectFn1 halt s
             onThat = EFn.mkEffectFn3 \obj ix v → do
               res ← EFn.runEffectFn1 build v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix (extract res) node ""
               pure res
           children2 ← EFn.runEffectFn6 Util.diffWithIxE fnObject ch1 (fromMaybe [] ch2) onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs value2
@@ -176,12 +176,12 @@ type ElemState a w =
 
 buildElem ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (VDom a w)) a w
 buildElem = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
-  el ← EFn.runEffectFn3 Util.createElement spec.fnObject (toNullable ns1) name1
+  el ← EFn.runEffectFn4 Util.createElement spec.fnObject (toNullable ns1) name1 "elem"
   let
     node = DOMElement.toNode el
     onChild = EFn.mkEffectFn2 \ix child → do
       res ← EFn.runEffectFn1 build child
-      EFn.runEffectFn5 Util.insertChildIx spec.fnObject "render" ix (extract res) node
+      EFn.runEffectFn6 Util.insertChildIx spec.fnObject "render" ix (extract res) node ""
       pure res
   children ← EFn.runEffectFn2 Util.forE ch1 onChild
   attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
@@ -220,12 +220,12 @@ patchElem fnObject = EFn.mkEffectFn2 \state vdom → do
           let
             onThese = EFn.mkEffectFn4 \obj ix s v → do
               res ← EFn.runEffectFn2 step s v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix (extract res) node ""
               pure res
             onThis = EFn.mkEffectFn3 \obj ix s → EFn.runEffectFn1 halt s
             onThat = EFn.mkEffectFn3 \obj ix v → do
               res ← EFn.runEffectFn1 build v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix (extract res) node ""
               pure res
           children2 ← EFn.runEffectFn6 Util.diffWithIxE fnObject ch1 ch2 onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs as2
@@ -262,12 +262,12 @@ type KeyedState a w =
 
 buildKeyed ∷ ∀ a w. VDomBuilder4 (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w))) a w
 buildKeyed = EFn.mkEffectFn6 \(VDomSpec spec) build ns1 name1 as1 ch1 → do
-  el ← EFn.runEffectFn3 Util.createElement spec.fnObject (toNullable ns1) name1
+  el ← EFn.runEffectFn4 Util.createElement spec.fnObject (toNullable ns1) name1 "keyed"
   let
     node = DOMElement.toNode el
     onChild = EFn.mkEffectFn4 \k ix _ (Tuple _ vdom) → do
       res ← EFn.runEffectFn1 build vdom
-      EFn.runEffectFn5 Util.insertChildIx spec.fnObject "render" ix (extract res) node
+      EFn.runEffectFn6 Util.insertChildIx spec.fnObject "render" ix (extract res) node k
       pure res
   children ← EFn.runEffectFn3 Util.strMapWithIxE ch1 fst onChild
   attrs ← EFn.runEffectFn1 (spec.buildAttributes spec.fnObject el) as1
@@ -306,14 +306,14 @@ patchKeyed fnObject = EFn.mkEffectFn2 \state vdom → do
           pure $ mkStep $ Step node nextState (patchKeyed fnObject) (haltKeyed fnObject)
         _, len2 → do
           let
-            onThese = EFn.mkEffectFn5 \obj _ ix' s (Tuple _ v) → do
+            onThese = EFn.mkEffectFn5 \obj k ix' s (Tuple _ v) → do
               res ← EFn.runEffectFn2 step s v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix' (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix' (extract res) node k
               pure res
             onThis = EFn.mkEffectFn3 \obj _ s → EFn.runEffectFn1 halt s
-            onThat = EFn.mkEffectFn4 \obj _ ix (Tuple _ v) → do
+            onThat = EFn.mkEffectFn4 \obj k ix (Tuple _ v) → do
               res ← EFn.runEffectFn1 build v
-              EFn.runEffectFn5 Util.insertChildIx obj "patch" ix (extract res) node
+              EFn.runEffectFn6 Util.insertChildIx obj "patch" ix (extract res) node k
               pure res
           children2 ← EFn.runEffectFn7 Util.diffWithKeyAndIxE fnObject ch1 ch2 fst onThese onThis onThat
           attrs2 ← EFn.runEffectFn2 step attrs as2

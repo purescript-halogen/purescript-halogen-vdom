@@ -116,7 +116,7 @@ type ShimmerItem a w =
   }
 
 type FnObject =
-  { replaceView :: forall a . EFn.EffectFn2 a (Array String) Unit
+  { replaceView :: forall a . EFn.EffectFn3 a String (Array String) Unit
   , setManualEvents :: forall a b. a -> b -> Effect Unit
   , updateChildren :: forall a. EFn.EffectFn1 a Unit
   , removeChild :: forall a b. EFn.EffectFn3 a b Int Unit
