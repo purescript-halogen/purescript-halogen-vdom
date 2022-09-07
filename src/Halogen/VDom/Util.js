@@ -152,6 +152,9 @@ exports.diffPropWithKeyAndIxE = function (fnObject, o1, as, fk, f1, f2, f3, el) 
     removedProps.push(k);
   }
   if (replace) {
+    for(var key in updatedProps) {
+      el.props[key] = updatedProps[key];
+    }
     fnObject.replaceView(el, removedProps);
   } else if(Object.keys(updatedProps).length > 0) {
     fnObject.updateProperties(el, updatedProps);
