@@ -46,6 +46,14 @@ thunk = Fn.mkFn4 \tid eqFn f a →
     (unsafeCoerce f ∷ ThunkArg → f i)
     (unsafeCoerce a ∷ ThunkArg)
 
+-- | Creates thunk with custom equality
+-- |
+-- | Also a unique reference is created, to stress the fact, that one
+-- | application of rendering function (`f` argument) and equality (`eqFn` argument) is only ever equal to itself
+-- |
+-- | It's done because of a distinction of how compiler generalizes equality functions
+-- | For more information check [HOW_THUNKED_FUNCTION_WORKS.md](https://github.com/purescript-halogen/purescript-halogen-vdom/blob/master/HOW_THUNKED_FUNCTION_WORKS.md) document
+
 thunked ∷ ∀ a f i. (a → a → Boolean) → (a → f i) → a → Thunk f i
 thunked eqFn f =
   let
@@ -54,6 +62,10 @@ thunked eqFn f =
   in
     \a → Fn.runFn4 thunk tid eqFn' f a
 
+-- | Creates thunk with equality that is fixed to referential equality (`===`)
+-- |
+-- | Works faster for types like `String` or `Integer`,
+-- | but will not work for arrays and objects
 thunk1 ∷ ∀ a f i. Fn.Fn2 (a → f i) a (Thunk f i)
 thunk1 = Fn.mkFn2 \f a → Fn.runFn4 thunk (unsafeThunkId f) Util.refEq f a
 
