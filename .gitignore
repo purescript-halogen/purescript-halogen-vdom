@@ -1,4 +1,4 @@
-/.*
+/.psc-ide-port
 !/.gitignore
 !/.eslintrc.json
 !/.travis.yml
@@ -7,3 +7,4 @@ package-lock.json
 /node_modules/
 /output/
 /**/*.ast
+/Session.vim
