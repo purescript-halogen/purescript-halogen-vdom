@@ -1,4 +1,6 @@
 /.psc-ide-port
+!/.editorconfig
+!/.tidyrc.json
 !/.gitignore
 !/.eslintrc.json
 !/.travis.yml

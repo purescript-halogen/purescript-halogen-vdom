@@ -37,12 +37,12 @@ data VDom a w
   | Microapp String a (Maybe (Array (VDom a w)))
 
 instance functorVDom ∷ Functor (VDom a) where
-  map g (Text a) = Text a
+  map _ (Text a) = Text a
   map g (Grafted a) = Grafted (map g a)
   map g a = Grafted (graft (Graft identity g a))
 
 instance bifunctorVDom ∷ Bifunctor VDom where
-  bimap f g (Text a) = Text a
+  bimap _ _ (Text a) = Text a
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
 

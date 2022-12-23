@@ -50,8 +50,7 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (ElemName, FnObject, Namespace, ShimmerHolder, VDom(..))
-import Halogen.VDom.Machine (Step)
+import Halogen.VDom.Types (ElemName, FnObject, Namespace)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM

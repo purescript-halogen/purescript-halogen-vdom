@@ -46,7 +46,7 @@ data Prop a
 instance functorProp ∷ Functor Prop where
   map f (Handler ty g) = Handler ty (map f <$> g)
   map f (Ref g) = Ref (map f <$> g)
-  map f p = unsafeCoerce p
+  map _ p = unsafeCoerce p
 
 data ElemRef a
   = Created a
@@ -92,7 +92,7 @@ buildProp emit fnObject el = renderProp
   where
   renderProp = EFn.mkEffectFn1 \ps1 → do
     events ← Util.newMutMap
-    props ← Util.newMutMap
+    _ ← Util.newMutMap
     listData ← Util.newMutMap
     ps1' ← EFn.runEffectFn3 Util.strMapWithIxE ps1 propToStrKey (applyProp "render" events)
     let
@@ -160,7 +160,7 @@ buildProp emit fnObject el = renderProp
       Ref f → do
         EFn.runEffectFn1 mbEmit (f (Created el))
         pure v
-      BHandler ty behavior → do
+      BHandler _ behavior → do
          EFn.runEffectFn1 mbEmit (behavior unit)
          pure v
       Payload payload -> do
