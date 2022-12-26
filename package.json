@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "clean": "rimraf output && rimraf",
-    "test": "pulp build -I test -- --censor-lib --strict",
-    "build": "eslint src && pulp -w build",
-    "compile": "eslint src && npx pulp build",
+    "start": "spago build -w --before 'npm run eslint'",
+    "eslint": "eslint src",
+    "compile": "eslint src && spago build",
+    "spago:install": "spago install",
     "prepare": "husky install"
   },
   "config": {
