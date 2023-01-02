@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "clean": "rimraf output && rimraf",
-    "start": "spago build -w --before 'npm run eslint'",
+    "start": "spago build -w --before 'npm run eslint' --purs-args '--censor-lib --strict'",
     "eslint": "eslint src",
-    "compile": "eslint src && spago build",
+    "compile": "eslint src && spago build --purs-args '--censor-lib --strict'",
     "spago:install": "spago install",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "eslint:fix": "eslint src --fix"
   },
   "config": {
     "commitizen": {
