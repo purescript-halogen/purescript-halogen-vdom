@@ -1,3 +1,10 @@
+## [3.0.2](https://bitbucket.org/juspay/purescript-halogen-vdom/compare/v3.0.1...v3.0.2) (2023-01-05)
+
+
+### Bug Fixes
+
+* PICAF-18952: Updating es-lint rules and adding eslint:fix ([ad1d72e](https://bitbucket.org/juspay/purescript-halogen-vdom/commits/ad1d72e254c25928f66fc8f049669362dadce519))
+
 ## [3.0.1](https://bitbucket.org/juspay/purescript-halogen-vdom/compare/v3.0.0...v3.0.1) (2022-12-27)
 
 
