@@ -58,7 +58,7 @@
         "prerelease": true
       }
     ],
-    "repositoryUrl": "git@bitbucket.org:juspay/purescript-halogen-vdom.git",
+    "repositoryUrl": "git@ssh.bitbucket.juspay.net:picaf/purescript-halogen-vdom.git",
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
