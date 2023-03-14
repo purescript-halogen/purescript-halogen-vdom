@@ -1,16 +1,16 @@
-exports.getData = function () {
+export const getData = function () {
   return ENV.generateData().toArray();
 };
 
-exports.getTimeout = function () {
+export const getTimeout = function () {
   return ENV.timeout
 };
 
-exports.pingRenderRate = function () {
+export const pingRenderRate = function () {
   Monitoring.renderRate.ping();
 };
 
-exports.requestAnimationFrame = function (f) {
+export const requestAnimationFrame = function (f) {
   return function () {
     window.requestAnimationFrame(function () {
       f();

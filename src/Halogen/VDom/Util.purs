@@ -5,8 +5,10 @@ module Halogen.VDom.Util
   , unsafeFreeze
   , unsafeLookup
   , unsafeGetAny
+  , unsafeGetProp
   , unsafeHasAny
   , unsafeSetAny
+  , unsafeSetProp
   , unsafeDeleteAny
   , forE
   , forEachE
@@ -14,20 +16,28 @@ module Halogen.VDom.Util
   , replicateE
   , diffWithIxE
   , diffWithKeyAndIxE
+  , diffPropWithKeyAndIxE
+  , diffArrayOfObjects
   , strMapWithIxE
   , refEq
   , createTextNode
   , setTextContent
   , createElement
+  , createMicroapp
   , insertChildIx
+  , insertChunkIx
+  , generateUUID
   , removeChild
   , parentNode
   , setAttribute
   , removeAttribute
   , addEventListener
   , removeEventListener
+  , removeProperty
   , JsUndefined
   , jsUndefined
+  , createChunkedElement
+  , diffChunkWithIxE
   ) where
 
 import Prelude
@@ -40,9 +50,8 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (Namespace, ElemName)
+import Halogen.VDom.Types (ElemName, FnObject, Namespace)
 import Unsafe.Coerce (unsafeCoerce)
-import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
 import Web.DOM.Node (Node) as DOM
 import Web.Event.EventTarget (EventListener) as DOM
@@ -62,13 +71,22 @@ unsafeFreeze = unsafeCoerce
 unsafeLookup ∷ ∀ a. Fn.Fn2 String (Object a) a
 unsafeLookup = unsafeGetAny
 
+foreign import unsafeGetProp
+  ∷ ∀ a b. Fn.Fn2 String a b
+
 foreign import unsafeGetAny
   ∷ ∀ a b. Fn.Fn2 String a b
 
 foreign import unsafeHasAny
   ∷ ∀ a. Fn.Fn2 String a Boolean
 
+foreign import unsafeSetProp
+  ∷ ∀ a b. EFn.EffectFn3 String a b Unit
+
 foreign import unsafeSetAny ∷ ∀ a b. EFn.EffectFn3 String a b Unit
+
+foreign import removeProperty
+  ∷ ∀ a b. EFn.EffectFn3 String a b Unit
 
 foreign import unsafeDeleteAny
   ∷ ∀ a. EFn.EffectFn2 String a Unit
@@ -102,51 +120,101 @@ foreign import replicateE
       Unit
 
 foreign import diffWithIxE
-  ∷ ∀ b c d
-  . EFn.EffectFn5
+  ∷ ∀ a b c d
+  . EFn.EffectFn6
+      FnObject
       (Array b)
       (Array c)
-      (EFn.EffectFn3 Int b c d)
-      (EFn.EffectFn2 Int b Unit)
-      (EFn.EffectFn2 Int c d)
+      (EFn.EffectFn4 a Int b c d)
+      (EFn.EffectFn3 a Int b Unit)
+      (EFn.EffectFn3 a Int c d)
       (Array d)
 
 foreign import diffWithKeyAndIxE
-  ∷ ∀ a b c d
-  . EFn.EffectFn6
+  ∷ ∀ a b c d e
+  . EFn.EffectFn7
+      FnObject
       (Object.Object a)
       (Array b)
       (b → String)
-      (EFn.EffectFn4 String Int a b c)
-      (EFn.EffectFn2 String a d)
-      (EFn.EffectFn3 String Int b c)
+      (EFn.EffectFn5 String e Int a b c)
+      (EFn.EffectFn3 String e a d)
+      (EFn.EffectFn4 String e Int b c)
       (Object.Object c)
 
+foreign import diffPropWithKeyAndIxE
+  ∷ ∀ a b c d e el
+  . EFn.EffectFn8
+      FnObject
+      (Object.Object a)
+      (Array b)
+      (b → String)
+      (EFn.EffectFn5 String Int e a b c)
+      (EFn.EffectFn2 String a d)
+      (EFn.EffectFn4 String Int e b c)
+      el
+      (Object.Object c)
+
+foreign import diffChunkWithIxE
+  ∷ ∀ a b c d e
+  . EFn.EffectFn6
+      FnObject
+      (Array b)
+      (Array c)
+      (EFn.EffectFn4 a Int e c d)
+      (EFn.EffectFn3 a Int e Unit)
+      (EFn.EffectFn3 a Int c d)
+      (Array d)
+
+
+foreign import diffArrayOfObjects
+  ∷ ∀ a b p el
+  . EFn.EffectFn6
+      FnObject
+      (Object a)
+      el
+      (Array (Object p))
+      (Array (Object p))
+      b
+      Unit
+      -- (Array (Object p))
+
 foreign import strMapWithIxE
-  ∷ ∀ a b
+  ∷ ∀ a b c
   . EFn.EffectFn3
       (Array a)
       (a → String)
-      (EFn.EffectFn3 String Int a b)
+      (EFn.EffectFn4 String Int a c b)
       (Object.Object b)
 
 foreign import refEq
   ∷ ∀ a b. Fn.Fn2 a b Boolean
 
 foreign import createTextNode
-  ∷ EFn.EffectFn2 String DOM.Document DOM.Node
+  ∷ EFn.EffectFn1 String  DOM.Node
 
 foreign import setTextContent
   ∷ EFn.EffectFn2 String DOM.Node Unit
 
 foreign import createElement
-  ∷ EFn.EffectFn3 (Nullable Namespace) ElemName DOM.Document DOM.Element
+  ∷ EFn.EffectFn4 FnObject (Nullable Namespace) ElemName String DOM.Element
+
+foreign import createChunkedElement
+  ∷ EFn.EffectFn3 FnObject (Nullable Namespace) ElemName DOM.Element
+
+foreign import createMicroapp
+  ∷ EFn.EffectFn3 FnObject String String DOM.Element
+
+foreign import generateUUID :: Effect String
 
 foreign import insertChildIx
-  ∷ EFn.EffectFn3 Int DOM.Node DOM.Node Unit
+  ∷ forall a. EFn.EffectFn6 a String Int DOM.Node DOM.Node String Unit
+
+foreign import insertChunkIx
+  ∷ forall a. EFn.EffectFn5 a String Int ({ shimmer :: DOM.Node, layout :: DOM.Node }) DOM.Node Unit
 
 foreign import removeChild
-  ∷ EFn.EffectFn2 DOM.Node DOM.Node Unit
+  ∷ forall a. EFn.EffectFn3 a DOM.Node DOM.Node Unit
 
 foreign import parentNode
   ∷ EFn.EffectFn1 DOM.Node DOM.Node
@@ -158,7 +226,7 @@ foreign import removeAttribute
   ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Unit
 
 foreign import addEventListener
-  ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
+  ∷ EFn.EffectFn5 FnObject String String DOM.EventListener DOM.Element Unit
 
 foreign import removeEventListener
   ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
@@ -166,3 +234,4 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
+

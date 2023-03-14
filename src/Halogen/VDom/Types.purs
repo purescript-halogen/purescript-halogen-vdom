@@ -1,6 +1,5 @@
 module Halogen.VDom.Types
   ( VDom(..)
-  , renderWidget
   , Graft
   , GraftX(..)
   , graft
@@ -8,11 +7,16 @@ module Halogen.VDom.Types
   , runGraft
   , ElemName(..)
   , Namespace(..)
+  , FnObject(..)
+  , ShimmerHolder(..)
+  , ShimmerItem(..)
   ) where
 
 import Prelude
+import Effect (Effect)
+import Effect.Uncurried as EFn
 import Data.Bifunctor (class Bifunctor, bimap)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple)
 import Unsafe.Coerce (unsafeCoerce)
@@ -26,31 +30,21 @@ import Unsafe.Coerce (unsafeCoerce)
 data VDom a w
   = Text String
   | Elem (Maybe Namespace) ElemName a (Array (VDom a w))
+  | Chunk (Maybe Namespace) ElemName a (ShimmerHolder a w)
   | Keyed (Maybe Namespace) ElemName a (Array (Tuple String (VDom a w)))
   | Widget w
   | Grafted (Graft a w)
+  | Microapp String a (Maybe (Array (VDom a w)))
 
 instance functorVDom ∷ Functor (VDom a) where
-  map g (Text a) = Text a
+  map _ (Text a) = Text a
   map g (Grafted a) = Grafted (map g a)
   map g a = Grafted (graft (Graft identity g a))
 
 instance bifunctorVDom ∷ Bifunctor VDom where
-  bimap f g (Text a) = Text a
+  bimap _ _ (Text a) = Text a
   bimap f g (Grafted a) = Grafted (bimap f g a)
   bimap f g a = Grafted (graft (Graft f g a))
-
--- | Replaces "widgets" in the `VDom` with the ability to turn them into other
--- | `VDom` nodes.
--- |
--- | Using this function will fuse any `Graft`s present in the `VDom`.
-renderWidget ∷ ∀ a b w x. (a → b) → (w → VDom b x) → VDom a w → VDom b x
-renderWidget f g = case _ of
-  Text a → Text a
-  Elem ns n a ch → Elem ns n (f a) (map (renderWidget f g) ch)
-  Keyed ns n a ch → Keyed ns n (f a) (map (map (renderWidget f g)) ch)
-  Widget w → g w
-  Grafted gaw → renderWidget f g (runGraft gaw)
 
 foreign import data Graft ∷ Type → Type → Type
 
@@ -88,8 +82,19 @@ runGraft =
       go (Keyed ns n a ch) = Keyed ns n (fa a) (map (map go) ch)
       go (Widget w) = Widget (fw w)
       go (Grafted g) = Grafted (bimap fa fw g)
+      go (Microapp s a child) = Microapp s (fa a) $
+        case child of
+          Just ch -> (Just $ map go ch)
+          _ -> Nothing
+      go (Chunk ns n a ch) = Chunk ns n (fa a) (chunkMap go ch)
     in
       go v
+
+chunkMap :: forall a a' w w'. (VDom a w -> VDom a' w') -> ShimmerHolder a w -> ShimmerHolder a' w'
+chunkMap go shimHolder = map (shimmerItemMap go) shimHolder
+
+shimmerItemMap :: forall a a' w w'. (VDom a w -> VDom a' w') -> ShimmerItem a w -> ShimmerItem a' w'
+shimmerItemMap go item = { shimmer : (go item.shimmer) , actualLayout : (go item.actualLayout) }
 
 newtype ElemName = ElemName String
 
@@ -102,3 +107,23 @@ newtype Namespace = Namespace String
 derive instance newtypeNamespace ∷ Newtype Namespace _
 derive newtype instance eqNamespace ∷ Eq Namespace
 derive newtype instance ordNamespace ∷ Ord Namespace
+
+type ShimmerHolder a w = Array (ShimmerItem a w)
+
+type ShimmerItem a w = 
+  { shimmer :: VDom a w 
+  , actualLayout :: VDom a w
+  }
+
+type FnObject =
+  { replaceView :: forall a . EFn.EffectFn3 a String (Array String) Unit
+  , setManualEvents :: forall a b. a -> b -> Effect Unit
+  , updateChildren :: forall a. EFn.EffectFn1 a Unit
+  , removeChild :: forall a b. EFn.EffectFn3 a b Int Unit
+  , createPrestoElement:: forall a. Effect a
+  , cancelBehavior :: EFn.EffectFn1 String Unit
+  , manualEventsName :: Array String
+  , updateMicroAppPayload :: ∀ b. EFn.EffectFn3 String b Boolean Unit
+  , updateProperties :: forall a b. EFn.EffectFn2 a b Unit
+  , parseParams :: forall a b c d. EFn.EffectFn3 a b c d
+  }

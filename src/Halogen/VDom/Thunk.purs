@@ -1,13 +1,16 @@
 module Halogen.VDom.Thunk
-  ( Thunk
+  ( Thunk(..)
+  , ThunkArg
+  , ThunkId
   , buildThunk
   , runThunk
   , hoist
-  , mapThunk
   , thunked
   , thunk1
   , thunk2
   , thunk3
+  , unsafeEqThunk
+  , unsafeThunkId
   ) where
 
 import Prelude
@@ -24,6 +27,7 @@ foreign import data ThunkArg ∷ Type
 
 foreign import data ThunkId ∷ Type
 
+data Thunk :: forall k. (k -> Type) -> k -> Type
 data Thunk f i = Thunk ThunkId (Fn.Fn2 ThunkArg ThunkArg Boolean) (ThunkArg → f i) ThunkArg
 
 unsafeThunkId ∷ ∀ a. a → ThunkId
@@ -33,10 +37,7 @@ instance functorThunk ∷ Functor f ⇒ Functor (Thunk f) where
   map f (Thunk a b c d) = Thunk a b (c >>> map f) d
 
 hoist ∷ ∀ f g. (f ~> g) → Thunk f ~> Thunk g
-hoist = mapThunk
-
-mapThunk ∷ ∀ f g i j. (f i -> g j) → Thunk f i -> Thunk g j
-mapThunk k (Thunk a b c d) = Thunk a b (c >>> k) d
+hoist k (Thunk a b c d) = Thunk a b (c >>> k) d
 
 thunk ∷ ∀ a f i. Fn.Fn4 ThunkId (Fn.Fn2 a a Boolean) (a → f i) a (Thunk f i)
 thunk = Fn.mkFn4 \tid eqFn f a →
@@ -86,6 +87,7 @@ unsafeEqThunk = Fn.mkFn2 \(Thunk a1 b1 _ d1) (Thunk a2 b2 _ d2) →
   Fn.runFn2 Util.refEq b1 b2 &&
   Fn.runFn2 Util.refEq d1 d2
 
+type ThunkState :: forall k. (k -> Type) -> k -> Type -> Type -> Type
 type ThunkState f i a w =
   { thunk ∷ Thunk f i
   , vdom ∷ M.Step (V.VDom a w) Node

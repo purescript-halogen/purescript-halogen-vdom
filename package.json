@@ -1,14 +1,90 @@
 {
+  "name": "purescript-halogen-vdom",
+  "version": "3.0.1",
   "private": true,
   "scripts": {
     "clean": "rimraf output && rimraf",
-    "test": "pulp build -I test -- --censor-lib --strict",
-    "build": "pulp build -- --censor-lib --strict"
+    "start": "spago build -w --before 'npm run eslint'",
+    "eslint": "eslint src",
+    "compile": "eslint src && spago build",
+    "spago:install": "spago install",
+    "prepare": "husky install"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/@digitalroute/cz-conventional-changelog-for-jira",
+      "jiraPrefix": "PICAF",
+      "jiraLocation": "post-type",
+      "jiraAppend": ":"
+    }
+  },
+  "commitlint": {
+    "plugins": [
+      "commitlint-plugin-jira-rules"
+    ],
+    "extends": [
+      "jira"
+    ],
+    "rules": {
+      "jira-task-id-max-length": [
+        0
+      ],
+      "jira-commit-message-separator": [
+        0
+      ],
+      "jira-commit-status-case": [
+        0
+      ],
+      "jira-task-id-project-key": [
+        0
+      ],
+      "jira-task-id-separator": [
+        0
+      ],
+      "jira-task-id-case": [
+        0
+      ],
+      "jira-task-id-min-length": [
+        0
+      ]
+    }
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "hotfix-[0-9]+.[0-9]+.[0-9]+",
+        "prerelease": true
+      }
+    ],
+    "repositoryUrl": "https://github.com/juspay/purescript-halogen-vdom.git",
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/changelog",
+      "@semantic-release/git"
+    ]
   },
   "devDependencies": {
-    "pulp": "^12.3.1",
-    "purescript": "^0.12.3",
-    "purescript-psa": "^0.7.3",
-    "rimraf": "^2.6.3"
+    "pulp": "^16.0.2",
+    "purescript": "^0.15.6",
+    "rimraf": "^2.6.2",
+    "@commitlint/cli": "^17.2.0",
+    "@commitlint/config-conventional": "^17.2.0",
+    "@digitalroute/cz-conventional-changelog-for-jira": "^7.4.2",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.3",
+    "commitlint-config-jira": "^1.6.4",
+    "commitlint-plugin-jira-rules": "^1.6.4",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.2",
+    "semantic-release": "^19.0.5",
+    "spago": "^0.20.9",
+    "eslint": "^8.29.0",
+    "purescript-psa": "^0.8.2"
   }
 }
