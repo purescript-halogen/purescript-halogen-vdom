@@ -25,15 +25,25 @@ module Halogen.VDom.Util
   , setAttribute
   , removeAttribute
   , hasAttribute
+  , getAttribute
+  , getAttributeSet
+  , deleteAttributeSet
+  , isEmptyAttributeSet
+  , toStringAttributeSet
+  , fullAttributeName
   , addEventListener
   , removeEventListener
   , JsUndefined
   , jsUndefined
+  , JsSet
+  , unsafeString
+  , unsafeIsBooleanFalse
   ) where
 
 import Prelude
 
 import Data.Function.Uncurried as Fn
+import Data.Maybe (Maybe(..))
 import Data.Nullable (Nullable)
 import Effect (Effect)
 import Effect.Uncurried as EFn
@@ -41,7 +51,7 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Foreign.Object.ST (STObject)
 import Foreign.Object.ST as STObject
-import Halogen.VDom.Types (Namespace, ElemName)
+import Halogen.VDom.Types (ElemName, Namespace(..))
 import Unsafe.Coerce (unsafeCoerce)
 import Web.DOM.Document (Document) as DOM
 import Web.DOM.Element (Element) as DOM
@@ -161,6 +171,9 @@ foreign import removeAttribute
 foreign import hasAttribute
   ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element Boolean
 
+foreign import getAttribute
+  ∷ EFn.EffectFn3 (Nullable Namespace) String DOM.Element (Nullable String)
+
 foreign import addEventListener
   ∷ EFn.EffectFn3 String DOM.EventListener DOM.Element Unit
 
@@ -170,3 +183,25 @@ foreign import removeEventListener
 foreign import data JsUndefined ∷ Type
 
 foreign import jsUndefined ∷ JsUndefined
+
+foreign import data JsSet :: Type -> Type
+
+foreign import getAttributeSet :: DOM.Element -> JsSet String
+
+foreign import deleteAttributeSet :: EFn.EffectFn2 (JsSet String) String Unit
+
+foreign import isEmptyAttributeSet :: JsSet String -> Boolean
+
+foreign import toStringAttributeSet :: JsSet String -> String
+
+fullAttributeName ∷ Maybe Namespace → String → String
+fullAttributeName maybeNamespace attributeName =
+  case maybeNamespace of
+    Just (Namespace namespace) -> 
+      namespace <> ":" <> attributeName
+    Nothing -> 
+      attributeName
+
+foreign import unsafeString :: forall a. a -> String
+
+foreign import unsafeIsBooleanFalse :: forall a. a -> Boolean

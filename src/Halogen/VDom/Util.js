@@ -157,6 +157,14 @@ export function hasAttribute(ns, attr, el) {
   }
 }
 
+export function getAttribute(ns, attr, el) {
+  if (ns != null) {
+    return el.getAttributeNS(ns, attr);
+  } else {
+    return el.getAttribute(attr);
+  }
+}
+
 export function addEventListener(ev, listener, el) {
   el.addEventListener(ev, listener, false);
 }
@@ -166,3 +174,31 @@ export function removeEventListener(ev, listener, el) {
 }
 
 export var jsUndefined = void 0;
+
+export function getAttributeSet(el) {
+  const attributeSet = new Set();
+  for (const attribute of el.attributes) {
+    attributeSet.add(attribute.name);
+  };
+  return attributeSet;
+}
+
+export function deleteAttributeSet(attributeSet, attributeName) {
+  attributeSet.delete(attributeName);
+}
+
+export function isEmptyAttributeSet(attributeSet) {
+  return attributeSet.size === 0;
+}
+
+export function toStringAttributeSet(attributeSet) {
+  return Array.from(attributeSet).map(item => `"${item}"`).join(", ");
+}
+
+export function unsafeString(v) {
+  return String(v);
+}
+
+export function unsafeIsBooleanFalse(v) {
+  return typeof(v) === "boolean" && !v;
+}

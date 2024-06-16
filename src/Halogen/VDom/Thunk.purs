@@ -1,6 +1,7 @@
 module Halogen.VDom.Thunk
   ( Thunk
   , buildThunk
+  , hydrateThunk
   , runThunk
   , hoist
   , mapThunk
@@ -15,6 +16,7 @@ import Prelude
 import Data.Function.Uncurried as Fn
 import Effect.Uncurried as EFn
 import Halogen.VDom as V
+import Halogen.VDom.DOM as D
 import Halogen.VDom.Machine as M
 import Halogen.VDom.Util as Util
 import Unsafe.Coerce (unsafeCoerce)
@@ -98,11 +100,26 @@ buildThunk
   . (f i → V.VDom a w)
   → V.VDomSpec a w
   → V.Machine (Thunk f i) Node
-buildThunk toVDom = renderThunk
+buildThunk toVDom spec = mkThunk (V.buildVDom spec) toVDom
+
+hydrateThunk
+  ∷ ∀ f i a w
+  . (f i → V.VDom a w)
+  → V.VDomHydrationSpec a w
+  → Node
+  → V.Machine (Thunk f i) Node
+hydrateThunk toVDom spec node = mkThunk (V.hydrateVDom spec node) toVDom
+
+mkThunk
+  ∷ ∀ f i a w
+  . D.VDomMachine a w
+  → (f i → V.VDom a w)
+  → V.Machine (Thunk f i) Node
+mkThunk machine toVDom = renderThunk
   where
-  renderThunk ∷ V.VDomSpec a w → V.Machine (Thunk f i) Node
-  renderThunk spec = EFn.mkEffectFn1 \t → do
-    vdom ← EFn.runEffectFn1 (V.buildVDom spec) (toVDom (runThunk t))
+  renderThunk ∷ V.Machine (Thunk f i) Node
+  renderThunk = EFn.mkEffectFn1 \t → do
+    vdom ← EFn.runEffectFn1 machine (toVDom (runThunk t))
     pure $ M.mkStep $ M.Step (M.extract vdom) { thunk: t, vdom } patchThunk haltThunk
 
   patchThunk ∷ EFn.EffectFn2 (ThunkState f i a w) (Thunk f i) (V.Step (Thunk f i) Node)

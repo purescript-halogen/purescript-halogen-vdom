@@ -11,24 +11,41 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: purescript-contrib/setup-purescript@main
-        with:
-          purescript: "unstable"
-
       - uses: actions/setup-node@v2
         with:
-          node-version: "14"
+          node-version: 18
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - name: Cache PureScript dependencies
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-spago-${{ hashFiles('**/spago.yaml') }}
+          path: |
+            .spago
+            output
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Cache pnpm Dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: |
-          npm install -g bower
-          npm install
-          bower install --production
+        run: pnpm install
 
       - name: Build source
-        run: npm run-script build
+        run: pnpm build
 
       - name: Run tests
-        run: |
-          bower install
-          npm run-script test --if-present
+        run: pnpm test --silent

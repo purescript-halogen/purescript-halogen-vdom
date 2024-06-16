@@ -1,0 +1,22 @@
+package:
+  name: halogen-vdom
+  dependencies:
+    - bifunctors
+    - console
+    - effect
+    - exists
+    - foreign
+    - foreign-object
+    - maybe
+    - prelude
+    - refs
+    - tuples
+    - unsafe-coerce
+    - web-html
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  packageSet:
+    registry: 51.2.0
+  extraPackages: {}
