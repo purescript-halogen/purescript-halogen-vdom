@@ -1,5 +1,6 @@
 {
   "private": true,
+  "author": "Nathan Faubion <nathan@n-son.com>",
   "scripts": {
     "clean": "rimraf output && rimraf",
     "test": "pulp build -I test -- --censor-lib --strict",
