@@ -3,6 +3,6 @@
 !/.eslintrc.json
 !/.github/
 package-lock.json
-/bower_components/
+spago.lock
 /node_modules/
 /output/
