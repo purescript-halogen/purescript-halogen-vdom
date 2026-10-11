@@ -2,13 +2,11 @@
   "private": true,
   "author": "Nathan Faubion <nathan@n-son.com>",
   "scripts": {
-    "clean": "rimraf output && rimraf",
-    "test": "pulp build -I test -- --censor-lib --strict",
-    "build": "pulp build -- --censor-lib --strict"
+    "clean": "rimraf output",
+    "test": "spago build --strict",
+    "build": "spago build --strict"
   },
   "devDependencies": {
-    "pulp": "^16.0.0-0",
-    "purescript-psa": "^0.8.2",
-    "rimraf": "^3.0.2"
+    "rimraf": "^6.1.3"
   }
 }
