@@ -25,5 +25,5 @@ jobs:
       - name: Build source
         run: npm run-script build
 
-      - name: Run tests
+      - name: Compile test example
         run: npm test
